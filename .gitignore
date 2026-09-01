@@ -1,0 +1,24 @@
+# Backend
+backend/.venv/
+backend/__pycache__/
+backend/**/__pycache__/
+backend/*.egg-info/
+backend/**/*.egg-info/
+backend/.pytest_cache/
+*.pyc
+
+# Runtime data -- session DBs and uploaded UCS/QKView/conf archives.
+# Never commit this: it can contain real customer configuration data
+# (IPs, hostnames, topology) once a real file is uploaded.
+backend/data/
+
+# Frontend
+frontend/node_modules/
+frontend/dist/
+frontend/.vite/
+
+# OS / editor
+.DS_Store
+*.log
+.env
+.env.local

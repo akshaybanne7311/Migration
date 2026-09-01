@@ -1,0 +1,450 @@
+@import "tailwindcss";
+
+/* ============================================================
+   F5 Config Intelligence — neon / HUD theme
+   Every rule below sits outside any @layer, so per CSS cascade
+   rules it beats Tailwind's own @layer utilities regardless of
+   source order — this reskins every component that already uses
+   Tailwind's slate/blue/emerald/amber/red/white utility classes
+   without having to touch each component file individually.
+   ============================================================ */
+
+/* Dark (default) palette. Everything below reads these as custom
+   properties rather than hardcoding colors, so the [data-theme="light"]
+   block further down can swap the whole app's palette without touching
+   any component file. */
+:root {
+  color-scheme: dark;
+
+  --bg: #05060d;
+  --bg-glow-1: #0a2a3d;
+  --bg-glow-2: #2a0a3d;
+
+  --surface: #0b0f1c;
+  --surface-2: #10162a;
+  --surface-3: #161d38;
+
+  --border-faint: rgba(56, 189, 248, 0.1);
+  --border-soft: rgba(56, 189, 248, 0.18);
+  --border: rgba(56, 189, 248, 0.3);
+  --border-strong: rgba(56, 189, 248, 0.5);
+
+  --text-dim: #5c6d94;
+  --text-muted: #8496c2;
+  --text-soft: #a9b8dd;
+  --text: #ccdaf7;
+  --text-bright: #f1f6ff;
+
+  --cyan: #22d3ee;
+  --cyan-bright: #67e8f9;
+  --violet: #a855f7;
+  --magenta: #ff4fd8;
+
+  --success: #2bffb0;
+  --success-strong: #05ffa1;
+  --warn: #ffb703;
+  --warn-strong: #ffd23f;
+  --danger: #ff2d6d;
+  --danger-strong: #ff5c8a;
+
+  --glow-cyan: 0 0 14px rgba(34, 211, 238, 0.45), 0 0 2px rgba(34, 211, 238, 0.7);
+  --glow-cyan-lg: 0 0 34px rgba(34, 211, 238, 0.35), 0 0 6px rgba(34, 211, 238, 0.55);
+  --glow-success: 0 0 14px rgba(43, 255, 176, 0.45);
+  --glow-warn: 0 0 14px rgba(255, 183, 3, 0.4);
+  --glow-danger: 0 0 14px rgba(255, 45, 109, 0.45);
+
+  --heading-glow: 0 0 18px rgba(103, 232, 249, 0.18);
+  --kpi-glow: 0 0 10px rgba(103, 232, 249, 0.4);
+  --body-grid-opacity: 0.035;
+  --body-radial-opacity: 1;
+}
+
+/* Light palette -- a clean, bright workspace theme rather than an
+   inverted neon (heavy glow/text-shadow reads as a rendering bug on a
+   white background, so those are toned down to near-zero here instead
+   of just flipping colors). */
+:root[data-theme="light"] {
+  color-scheme: light;
+
+  --bg: #eef2f9;
+  --bg-glow-1: #dbeafe;
+  --bg-glow-2: #ede9fe;
+
+  --surface: #ffffff;
+  --surface-2: #f3f6fb;
+  --surface-3: #e7edf6;
+
+  --border-faint: rgba(15, 23, 42, 0.06);
+  --border-soft: rgba(15, 23, 42, 0.1);
+  --border: rgba(14, 165, 233, 0.35);
+  --border-strong: rgba(8, 145, 178, 0.55);
+
+  --text-dim: #94a3b8;
+  --text-muted: #64748b;
+  --text-soft: #475569;
+  --text: #1e293b;
+  --text-bright: #0f172a;
+
+  --cyan: #0891b2;
+  --cyan-bright: #0e7490;
+  --violet: #7c3aed;
+  --magenta: #db2777;
+
+  --success: #059669;
+  --success-strong: #047857;
+  --warn: #b45309;
+  --warn-strong: #92400e;
+  --danger: #dc2626;
+  --danger-strong: #b91c1c;
+
+  --glow-cyan: 0 1px 3px rgba(15, 23, 42, 0.1);
+  --glow-cyan-lg: 0 2px 10px rgba(8, 145, 178, 0.25);
+  --glow-success: 0 1px 3px rgba(15, 23, 42, 0.08);
+  --glow-warn: 0 1px 3px rgba(15, 23, 42, 0.08);
+  --glow-danger: 0 1px 3px rgba(15, 23, 42, 0.08);
+
+  --heading-glow: none;
+  --kpi-glow: none;
+  --body-grid-opacity: 0.05;
+  --body-radial-opacity: 0.5;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  font-family: "Rajdhani", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  font-size: 15px;
+  color: var(--text);
+  background-color: var(--bg);
+  background-image:
+    radial-gradient(circle at 8% 8%, color-mix(in srgb, var(--bg-glow-1) calc(var(--body-radial-opacity) * 100%), transparent), transparent 42%),
+    radial-gradient(circle at 92% 12%, color-mix(in srgb, var(--bg-glow-2) calc(var(--body-radial-opacity) * 100%), transparent), transparent 40%),
+    radial-gradient(circle at 50% 100%, color-mix(in srgb, var(--bg-glow-1) calc(var(--body-radial-opacity) * 80%), transparent), transparent 55%),
+    repeating-linear-gradient(0deg, color-mix(in srgb, var(--cyan) calc(var(--body-grid-opacity) * 100%), transparent) 0px, color-mix(in srgb, var(--cyan) calc(var(--body-grid-opacity) * 100%), transparent) 1px, transparent 1px, transparent 32px),
+    repeating-linear-gradient(90deg, color-mix(in srgb, var(--cyan) calc(var(--body-grid-opacity) * 100%), transparent) 0px, color-mix(in srgb, var(--cyan) calc(var(--body-grid-opacity) * 100%), transparent) 1px, transparent 1px, transparent 32px);
+  background-attachment: fixed;
+  transition: background-color 0.25s ease, color 0.25s ease;
+}
+
+::selection {
+  background: rgba(34, 211, 238, 0.3);
+  color: var(--text-bright);
+}
+
+/* thin neon scrollbar */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: linear-gradient(var(--cyan), var(--violet));
+  border-radius: 999px;
+  border: 2px solid var(--bg);
+}
+
+.font-display {
+  font-family: "Orbitron", "Rajdhani", system-ui, sans-serif;
+  letter-spacing: 0.04em;
+}
+
+.font-mono-neon {
+  font-family: "Share Tech Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.animate-page-in {
+  animation: fadeInUp 0.32s ease both;
+}
+
+@keyframes neonPulse {
+  0%,
+  100% {
+    box-shadow: var(--glow-cyan);
+  }
+  50% {
+    box-shadow: var(--glow-cyan-lg);
+  }
+}
+
+@keyframes dotPulse {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.55;
+    transform: scale(1.35);
+  }
+}
+
+@keyframes shimmerSweep {
+  0% {
+    transform: translateX(-120%);
+  }
+  100% {
+    transform: translateX(220%);
+  }
+}
+
+@keyframes scanline {
+  0% {
+    background-position: 0 0;
+  }
+  100% {
+    background-position: 0 100%;
+  }
+}
+
+@keyframes gridDrift {
+  0% {
+    background-position: 0 0, 0 0;
+  }
+  100% {
+    background-position: 64px 64px, -64px 64px;
+  }
+}
+
+/* ---- reusable neon components ---- */
+
+.neon-btn {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+}
+.neon-btn::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(115deg, transparent 20%, rgba(255, 255, 255, 0.35) 50%, transparent 80%);
+  transform: translateX(-120%);
+  pointer-events: none;
+}
+.neon-btn:hover:not(:disabled)::after {
+  animation: shimmerSweep 0.9s ease;
+}
+.neon-btn:hover:not(:disabled) {
+  filter: brightness(1.12);
+  transform: translateY(-1px);
+}
+.neon-btn:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.neon-card {
+  position: relative;
+  transition: box-shadow 0.25s ease, border-color 0.25s ease, transform 0.25s ease;
+}
+.neon-card:hover {
+  border-color: var(--border-strong) !important;
+  box-shadow: 0 0 0 1px rgba(56, 189, 248, 0.12), 0 8px 30px rgba(0, 0, 0, 0.55), 0 0 24px rgba(34, 211, 238, 0.08);
+}
+
+.neon-dot {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  animation: dotPulse 1.8s ease-in-out infinite;
+}
+
+/* ============================================================
+   Tailwind utility-class overrides — every color token below is
+   used by an existing component; remapping the class itself (not
+   the Tailwind color token) is a surgical reskin that leaves
+   text-white on buttons untouched while retargeting every
+   bg-white "card surface" to the glass panel color.
+   ============================================================ */
+
+.bg-white {
+  background-color: var(--surface) !important;
+  background-image: linear-gradient(180deg, rgba(56, 189, 248, 0.04), transparent 40%);
+}
+.bg-slate-50 {
+  background-color: var(--surface-2) !important;
+}
+.bg-slate-100 {
+  background-color: var(--surface-3) !important;
+}
+.bg-slate-200 {
+  background-color: rgba(56, 189, 248, 0.16) !important;
+}
+.bg-slate-900 {
+  background-color: #04060c !important;
+}
+
+.border-slate-50 {
+  border-color: var(--border-faint) !important;
+}
+.border-slate-100 {
+  border-color: var(--border-soft) !important;
+}
+.border-slate-200 {
+  border-color: var(--border) !important;
+}
+.border-slate-300 {
+  border-color: var(--border-strong) !important;
+}
+
+.text-slate-400 {
+  color: var(--text-dim) !important;
+}
+.text-slate-500 {
+  color: var(--text-muted) !important;
+}
+.text-slate-600 {
+  color: var(--text-soft) !important;
+}
+.text-slate-700 {
+  color: var(--text) !important;
+}
+.text-slate-800 {
+  color: var(--text-bright) !important;
+}
+.text-slate-900 {
+  color: var(--text-bright) !important;
+  text-shadow: var(--heading-glow);
+}
+
+.bg-blue-50 {
+  background-color: rgba(34, 211, 238, 0.1) !important;
+}
+.bg-blue-100 {
+  background-color: rgba(34, 211, 238, 0.18) !important;
+}
+.bg-blue-600 {
+  background-image: linear-gradient(135deg, #0891b2, #6d28d9) !important;
+  background-color: var(--cyan) !important;
+  box-shadow: var(--glow-cyan);
+}
+.bg-blue-700 {
+  background-image: linear-gradient(135deg, #0e7490, #7c3aed) !important;
+  background-color: #0ea5c9 !important;
+}
+.text-blue-600 {
+  color: var(--cyan-bright) !important;
+}
+.text-blue-700 {
+  color: var(--cyan-bright) !important;
+}
+.ring-blue-500 {
+  --tw-ring-color: var(--cyan) !important;
+}
+
+.bg-emerald-50 {
+  background-color: rgba(43, 255, 176, 0.1) !important;
+}
+.border-emerald-200 {
+  border-color: rgba(43, 255, 176, 0.4) !important;
+}
+.text-emerald-600 {
+  color: var(--success-strong) !important;
+  text-shadow: var(--kpi-glow);
+}
+.text-emerald-700 {
+  color: var(--success) !important;
+}
+
+.bg-amber-50 {
+  background-color: rgba(255, 183, 3, 0.1) !important;
+}
+.border-amber-100 {
+  border-color: rgba(255, 183, 3, 0.3) !important;
+}
+.border-amber-200 {
+  border-color: rgba(255, 183, 3, 0.4) !important;
+}
+.text-amber-700 {
+  color: var(--warn-strong) !important;
+}
+.text-amber-800 {
+  color: var(--warn-strong) !important;
+}
+
+.bg-red-50 {
+  background-color: rgba(255, 45, 109, 0.1) !important;
+}
+.bg-red-600 {
+  background-image: linear-gradient(135deg, #db2777, #7c2d92) !important;
+  background-color: var(--danger) !important;
+  box-shadow: var(--glow-danger);
+}
+.bg-red-700 {
+  background-image: linear-gradient(135deg, #be185d, #6b21a8) !important;
+}
+.border-red-200 {
+  border-color: rgba(255, 45, 109, 0.4) !important;
+}
+.text-red-500 {
+  color: var(--danger-strong) !important;
+}
+.text-red-600 {
+  color: var(--danger-strong) !important;
+  text-shadow: var(--kpi-glow);
+}
+.text-red-700 {
+  color: var(--danger-strong) !important;
+}
+
+.shadow-sm {
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(56, 189, 248, 0.05) !important;
+}
+
+/* Tailwind compiles pseudo-class variants (hover:/focus:/disabled:) as
+   their own distinct class names with a :hover/:focus selector attached --
+   completely separate from the plain ".bg-slate-50" etc. rules above, so
+   every variant actually used in the app needs its own override too, or
+   it silently falls back to Tailwind's real (light-theme) color on
+   hover/focus. This is what caused hovering a table row to flash a real
+   light-gray background under still-light-colored text. */
+.hover\:bg-blue-50:hover {
+  background-color: rgba(34, 211, 238, 0.1) !important;
+}
+.hover\:bg-blue-700:hover {
+  background-image: linear-gradient(135deg, #0e7490, #7c3aed) !important;
+  background-color: #0ea5c9 !important;
+}
+.hover\:bg-red-700:hover {
+  background-image: linear-gradient(135deg, #be185d, #6b21a8) !important;
+}
+.hover\:bg-slate-50:hover {
+  background-color: var(--surface-2) !important;
+}
+.hover\:bg-slate-100:hover {
+  background-color: var(--surface-3) !important;
+}
+.hover\:text-red-600:hover {
+  color: var(--danger-strong) !important;
+}
+.hover\:text-slate-600:hover {
+  color: var(--text-soft) !important;
+}
+.hover\:text-slate-700:hover {
+  color: var(--text) !important;
+}
+.hover\:text-slate-800:hover,
+.hover\:text-slate-900:hover {
+  color: var(--text-bright) !important;
+}
+.focus\:border-slate-300:focus {
+  border-color: var(--border-strong) !important;
+}
+.focus\:ring-blue-500:focus {
+  --tw-ring-color: var(--cyan) !important;
+}
