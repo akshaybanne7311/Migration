@@ -1,4 +1,4 @@
-# F5 Config Intelligence
+# Config Intelligence
 
 <p align="center">
   <img alt="Python" src="https://img.shields.io/badge/backend-Python%203.9%2B-3776AB?logo=python&logoColor=white" />

@@ -28,7 +28,7 @@ export async function exportMigrationPlanToExcel(params: {
   const [{ default: ExcelJSRuntime }, { saveAs }] = await Promise.all([import("exceljs"), import("file-saver")]);
 
   const wb = new ExcelJSRuntime.Workbook();
-  wb.creator = "F5 Config Intelligence";
+  wb.creator = "Config Intelligence";
   wb.created = new Date();
 
   const summary = wb.addWorksheet("Summary");

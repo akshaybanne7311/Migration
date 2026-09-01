@@ -13,7 +13,7 @@ logging.basicConfig(
 )
 logger = logging.getLogger("f5ci")
 
-app = FastAPI(title="F5 Config Intelligence API", version="0.1.0")
+app = FastAPI(title="Config Intelligence API", version="0.1.0")
 
 app.add_middleware(
     CORSMiddleware,

@@ -40,8 +40,8 @@ export function Sidebar() {
           style={{ background: "var(--cyan)", boxShadow: "var(--glow-cyan)" }}
         />
         <div>
-          <div className="font-display text-[14px] font-bold leading-tight bg-clip-text text-transparent bg-gradient-to-r from-cyan-300 via-sky-300 to-fuchsia-400">
-            F5 CONFIG INTEL
+          <div className="font-display text-[12.5px] font-bold leading-tight tracking-tight whitespace-nowrap bg-clip-text text-transparent bg-gradient-to-r from-cyan-300 via-sky-300 to-fuchsia-400">
+            CONFIG INTELLIGENCE
           </div>
           <div className="text-[11px] text-slate-400 mt-0.5 tracking-wide">Migration workspace</div>
         </div>

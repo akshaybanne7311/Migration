@@ -6,7 +6,7 @@ build-backend = "setuptools.build_meta"
 packages = ["app"]
 
 [project]
-name = "f5-config-intelligence-backend"
+name = "config-intelligence-backend"
 version = "0.1.0"
 requires-python = ">=3.9"
 dependencies = [
