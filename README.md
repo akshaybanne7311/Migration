@@ -107,7 +107,17 @@ UCS/QKView/bigip.conf
 
 ## Status
 
-Backend and frontend are both fully tested against a synthetic fixture (78 backend tests, zero console errors
-across every page in browser testing). Not yet validated against a real production UCS file, and SNAT pools /
-self-IPs / route domain objects aren't modeled yet — see open items before treating this as production-ready
-for your environment.
+**Verified, re-confirmed as of this commit:**
+- 78/78 backend tests passing
+- Zero console/page errors across all 15 frontend routes, including interactive flows (F5 GUI Preview edit,
+  theme toggle)
+
+**Known gaps — not yet built:**
+- Not validated against a real production UCS file — everything above runs against a synthetic fixture
+- SNAT pools (translation address pools), self-IPs, and route-domain objects aren't modeled as first-class
+  objects yet (route domain *suffix* parsing on a VIP destination — the `%N` in `2001:db8::1%10` — is handled;
+  a dedicated `net route-domain` object is not)
+- Docker deployment files are written but not build-tested end-to-end in this environment
+
+Treat this as a well-tested planning/generation tool against the data it's actually been run against — not yet
+a claim of production-readiness for your specific environment until the item above is closed.
