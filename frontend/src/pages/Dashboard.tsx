@@ -11,7 +11,7 @@ export function DashboardPage() {
         <PageHeader title="Dashboard" />
         <EmptyState
           title="No session selected"
-          subtitle="Upload a BIG-IP configuration to begin, or pick an existing session."
+          subtitle="Upload a device configuration to begin, or pick an existing session."
         />
         <div className="mt-4 flex gap-3">
           <Link to="/upload">

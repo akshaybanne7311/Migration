@@ -13,10 +13,10 @@ COPY app ./app
 # Persistent data (registry.db, per-session dbs, uploaded archives) lives
 # here -- mount a volume at this path in production so sessions survive a
 # container restart/redeploy.
-ENV F5CI_DATA_DIR=/data
-RUN mkdir -p /data && useradd --create-home --shell /bin/false f5ci \
-    && chown -R f5ci:f5ci /app /data
-USER f5ci
+ENV CFGI_DATA_DIR=/data
+RUN mkdir -p /data && useradd --create-home --shell /bin/false cfgi \
+    && chown -R cfgi:cfgi /app /data
+USER cfgi
 
 EXPOSE 8000
 

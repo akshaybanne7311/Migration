@@ -1,11 +1,11 @@
 import { useMemo, useState } from "react";
 import { useNodes, usePools, useValidatedSession, useVips } from "../api/queries";
 import type { Vip } from "../api/types";
-import { F5GuiPreview } from "../components/F5GuiPreview";
+import { GuiPreview } from "../components/GuiPreview";
 import { VipSummaryTable } from "../components/VipSummaryTable";
 import { Card, EmptyState, PageHeader } from "../components/ui";
 
-export function F5GuiPreviewPage() {
+export function GuiPreviewPage() {
   const { sessionId } = useValidatedSession();
   const [search, setSearch] = useState("");
   const { data: vipsData, isLoading } = useVips(sessionId, search);
@@ -25,7 +25,7 @@ export function F5GuiPreviewPage() {
   if (!sessionId) {
     return (
       <div>
-        <PageHeader title="F5 GUI Preview" />
+        <PageHeader title="GUI Preview" />
         <EmptyState title="No session selected" subtitle="Pick a session from the top bar first." />
       </div>
     );
@@ -34,8 +34,8 @@ export function F5GuiPreviewPage() {
   return (
     <div>
       <PageHeader
-        title="F5 GUI Preview"
-        subtitle="See any VIP the way it looks in the BIG-IP Configuration Utility, edit fields, and get the real TMSH command for the change."
+        title="GUI Preview"
+        subtitle="See any VIP the way it looks in the device configuration console, edit fields, and get the real TMSH command for the change."
       />
       <div className="mb-4">
         <input
@@ -56,7 +56,7 @@ export function F5GuiPreviewPage() {
       )}
 
       {openVip && (
-        <F5GuiPreview
+        <GuiPreview
           vip={openVip}
           pool={openVip.pool_name ? poolsByName[openVip.pool_name] : undefined}
           allVips={vipsData?.items ?? [openVip]}

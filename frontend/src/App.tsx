@@ -7,7 +7,7 @@ import { VipsPage } from "./pages/VipsPage";
 import { PoolsPage } from "./pages/PoolsPage";
 import { NodesPage } from "./pages/NodesPage";
 import { SystemConfigPage } from "./pages/SystemConfigPage";
-import { F5GuiPreviewPage } from "./pages/F5GuiPreviewPage";
+import { GuiPreviewPage } from "./pages/GuiPreviewPage";
 import { SmartMigrationPage } from "./pages/SmartMigrationPage";
 import {
   ChangeSetPage,
@@ -29,7 +29,7 @@ export default function App() {
         <Route path="/pools" element={<PoolsPage />} />
         <Route path="/nodes" element={<NodesPage />} />
         <Route path="/system-config" element={<SystemConfigPage />} />
-        <Route path="/f5-gui" element={<F5GuiPreviewPage />} />
+        <Route path="/gui-preview" element={<GuiPreviewPage />} />
         <Route path="/smart-migration" element={<SmartMigrationPage />} />
         <Route path="/change-set" element={<ChangeSetPage />} />
         <Route path="/tmsh-generator" element={<TmshGeneratorPage />} />

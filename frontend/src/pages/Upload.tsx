@@ -45,7 +45,7 @@ export function UploadPage() {
     <div className="max-w-2xl">
       <PageHeader
         title="Upload configuration"
-        subtitle="Upload a BIG-IP UCS archive, QKView, or a raw bigip.conf file."
+        subtitle="Upload a UCS archive, QKView, or a raw device configuration file."
       />
       <Card className="p-6">
         <input

@@ -7,10 +7,10 @@ services:
       # once nginx is proxying same-origin /api/ (browser never crosses
       # origins), but kept explicit/overridable for setups that expose the
       # backend directly too.
-      F5CI_CORS_ORIGINS_RAW: ${F5CI_CORS_ORIGINS_RAW:-http://localhost:8080}
+      CFGI_CORS_ORIGINS_RAW: ${CFGI_CORS_ORIGINS_RAW:-http://localhost:8080}
       WEB_CONCURRENCY: ${BACKEND_WORKERS:-4}
     volumes:
-      - f5ci-data:/data
+      - cfgi-data:/data
     healthcheck:
       test: ["CMD", "curl", "-f", "http://127.0.0.1:8000/api/v1/health"]
       interval: 30s
@@ -28,4 +28,4 @@ services:
         condition: service_healthy
 
 volumes:
-  f5ci-data:
+  cfgi-data:

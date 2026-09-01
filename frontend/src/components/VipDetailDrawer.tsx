@@ -2,7 +2,7 @@ import { useState } from "react";
 import { createPortal } from "react-dom";
 import type { NodeObj, Pool, Vip } from "../api/types";
 import { Button } from "./ui";
-import { F5GuiPreview } from "./F5GuiPreview";
+import { GuiPreview } from "./GuiPreview";
 
 function Field({ label, value }: { label: string; value: React.ReactNode }) {
   return (
@@ -105,14 +105,14 @@ export function VipDetailDrawer({
               View Full Configuration
             </Button>
             <Button variant="secondary" onClick={() => setShowGuiPreview(true)}>
-              Preview in F5 GUI
+              Preview in GUI
             </Button>
           </div>
         </div>
       </div>
 
       {showGuiPreview && (
-        <F5GuiPreview
+        <GuiPreview
           vip={vip}
           pool={pool}
           allVips={allVips ?? [vip]}

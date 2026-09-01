@@ -45,7 +45,7 @@ export async function exportSopDocument(params: {
       {
         children: [
           new Paragraph({
-            children: [new TextRun({ text: "F5 BIG-IP Migration — Standard Operating Procedure", bold: true, size: 36 })],
+            children: [new TextRun({ text: "Network Device Migration — Standard Operating Procedure", bold: true, size: 36 })],
             spacing: { after: 100 },
           }),
           new Paragraph({
@@ -76,7 +76,7 @@ export async function exportSopDocument(params: {
           }),
 
           h("2. Pre-Migration Checklist", HeadingLevel.HEADING_1),
-          checklistItem("Take a fresh UCS backup of the source (and target, if different) BIG-IP device."),
+          checklistItem("Take a fresh UCS backup of the source (and target, if different) device."),
           checklistItem("Confirm the maintenance window and notify affected application owners."),
           checklistItem("Confirm target device connectivity (SSH / mgmt) and TMOS version compatibility."),
           checklistItem(
@@ -84,7 +84,7 @@ export async function exportSopDocument(params: {
               ? "Confirm the target partition (Common) is clean of naming conflicts for the objects listed in Section 4."
               : "Confirm every node/pool/virtual referenced below already exists on the target device.",
           ),
-          checklistItem("If any VLAN referenced below is externally managed (F5OS/rSeries), confirm it already exists on the target — this tool does not create it unless explicitly enabled."),
+          checklistItem("If any VLAN referenced below is externally managed, confirm it already exists on the target — this tool does not create it unless explicitly enabled."),
           checklistItem("Review the Validation Results in Section 3 — do not proceed if the overall status is BLOCKED."),
 
           h("3. Validation Results", HeadingLevel.HEADING_1),

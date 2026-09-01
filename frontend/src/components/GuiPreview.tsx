@@ -4,9 +4,9 @@ import { api } from "../api/client";
 import type { NodeObj, Pool, Vip } from "../api/types";
 import { toast } from "./toastStore";
 
-/** Recreates the look of the F5 BIG-IP Configuration Utility (TMUI) so an
- * engineer can visually sanity-check what a parsed VIP looks like in the
- * real admin console, without needing access to a live device -- and lets
+/** Recreates the look of a typical device configuration console so an
+ * engineer can visually sanity-check what a parsed VIP looks like in an
+ * admin console, without needing access to a live device -- and lets
  * them edit fields right here and see the real TMSH command for that edit.
  *
  * The edit -> TMSH step never reimplements the change engine's field
@@ -16,17 +16,17 @@ import { toast } from "./toastStore";
  * produce, for this one VIP, and round-trips it through the real
  * create-plan / validate / generate API calls -- so the TMSH shown is
  * never a guess, it's the same backend that generates everything else in
- * this app. Not a pixel-exact clone, and not affiliated with F5, Inc. */
+ * this app. Not a pixel-exact clone of any particular vendor's console. */
 
-// This mockup must always render as a real (light) F5 console -- never
+// This mockup must always render as a real (light) device console -- never
 // reactive to the host app's own dark/light theme toggle. Every color
 // below is applied via inline `style`, not a plain Tailwind utility class
 // (e.g. never `text-slate-600` / `bg-white`) -- the app's global CSS
 // reskin (src/index.css) targets exactly those literal class names, and
-// pairing one of them with an inline F5-palette background silently broke
+// pairing one of them with an inline device-palette background silently broke
 // contrast (light-themed override text landing on a light inline
 // background, or vice versa) wherever only one side of a pair got caught.
-const F5 = {
+const UI = {
   bar: "#14181f",
   navy: "#1f2c3a",
   navyActive: "#0c5c8c",
@@ -68,7 +68,7 @@ function StatusDot({ up }: { up: boolean }) {
   return (
     <span
       className="inline-block h-2.5 w-2.5 rounded-full mr-1.5 align-middle"
-      style={{ background: up ? F5.green : F5.gray }}
+      style={{ background: up ? UI.green : UI.gray }}
     />
   );
 }
@@ -76,7 +76,7 @@ function StatusDot({ up }: { up: boolean }) {
 function SectionHeader({ label }: { label: string }) {
   return (
     <tr>
-      <td colSpan={2} className="px-3 py-1.5 text-white text-[13px] font-semibold" style={{ background: F5.sectionHead }}>
+      <td colSpan={2} className="px-3 py-1.5 text-white text-[13px] font-semibold" style={{ background: UI.sectionHead }}>
         {label}
       </td>
     </tr>
@@ -85,12 +85,12 @@ function SectionHeader({ label }: { label: string }) {
 
 function PropRow({ label, value }: { label: string; value: React.ReactNode }) {
   return (
-    <tr className="border-b" style={{ borderColor: F5.border }}>
-      <td className="w-56 align-top px-3 py-2 text-right text-[13px]" style={{ color: F5.textLabel, background: F5.white }}>
+    <tr className="border-b" style={{ borderColor: UI.border }}>
+      <td className="w-56 align-top px-3 py-2 text-right text-[13px]" style={{ color: UI.textLabel, background: UI.white }}>
         {label}
       </td>
-      <td className="px-3 py-2 text-[13px]" style={{ color: F5.textValue, background: F5.white }}>
-        {value ?? <span style={{ color: F5.textMuted }}>—</span>}
+      <td className="px-3 py-2 text-[13px]" style={{ color: UI.textValue, background: UI.white }}>
+        {value ?? <span style={{ color: UI.textMuted }}>—</span>}
       </td>
     </tr>
   );
@@ -110,8 +110,8 @@ function EditableRow({
   mono?: boolean;
 }) {
   return (
-    <tr className="border-b" style={{ borderColor: F5.border, background: dirty ? "#fff8e6" : F5.white }}>
-      <td className="w-56 align-top px-3 py-2 text-right text-[13px]" style={{ color: F5.textLabel, background: "transparent" }}>
+    <tr className="border-b" style={{ borderColor: UI.border, background: dirty ? "#fff8e6" : UI.white }}>
+      <td className="w-56 align-top px-3 py-2 text-right text-[13px]" style={{ color: UI.textLabel, background: "transparent" }}>
         {label}
       </td>
       <td className="px-3 py-1.5" style={{ background: "transparent" }}>
@@ -119,7 +119,7 @@ function EditableRow({
           value={value}
           onChange={(e) => onChange(e.target.value)}
           className={`w-full text-[13px] px-2 py-1 rounded border ${mono ? "font-mono" : ""}`}
-          style={{ borderColor: dirty ? "#d97706" : F5.border, background: F5.white, color: F5.textValue }}
+          style={{ borderColor: dirty ? "#d97706" : UI.border, background: UI.white, color: UI.textValue }}
         />
         {dirty && <span className="text-[11px] ml-1" style={{ color: "#b45309" }}>changed</span>}
       </td>
@@ -132,54 +132,54 @@ function VirtualServerListView({ vips, onOpen }: { vips: Vip[]; onOpen: (v: Vip)
     <table className="w-full text-[13px] border-collapse">
       <thead>
         <tr style={{ background: "#dfe6ec" }}>
-          <th className="text-left px-3 py-2 font-semibold border" style={{ borderColor: F5.border, color: F5.textLabel }}>
+          <th className="text-left px-3 py-2 font-semibold border" style={{ borderColor: UI.border, color: UI.textLabel }}>
             Status
           </th>
-          <th className="text-left px-3 py-2 font-semibold border" style={{ borderColor: F5.border, color: F5.textLabel }}>
+          <th className="text-left px-3 py-2 font-semibold border" style={{ borderColor: UI.border, color: UI.textLabel }}>
             Name
           </th>
-          <th className="text-left px-3 py-2 font-semibold border" style={{ borderColor: F5.border, color: F5.textLabel }}>
+          <th className="text-left px-3 py-2 font-semibold border" style={{ borderColor: UI.border, color: UI.textLabel }}>
             Destination
           </th>
-          <th className="text-left px-3 py-2 font-semibold border" style={{ borderColor: F5.border, color: F5.textLabel }}>
+          <th className="text-left px-3 py-2 font-semibold border" style={{ borderColor: UI.border, color: UI.textLabel }}>
             Service Port
           </th>
-          <th className="text-left px-3 py-2 font-semibold border" style={{ borderColor: F5.border, color: F5.textLabel }}>
+          <th className="text-left px-3 py-2 font-semibold border" style={{ borderColor: UI.border, color: UI.textLabel }}>
             Type
           </th>
-          <th className="text-left px-3 py-2 font-semibold border" style={{ borderColor: F5.border, color: F5.textLabel }}>
+          <th className="text-left px-3 py-2 font-semibold border" style={{ borderColor: UI.border, color: UI.textLabel }}>
             Resources
           </th>
-          <th className="text-left px-3 py-2 font-semibold border" style={{ borderColor: F5.border, color: F5.textLabel }}>
+          <th className="text-left px-3 py-2 font-semibold border" style={{ borderColor: UI.border, color: UI.textLabel }}>
             Partition
           </th>
         </tr>
       </thead>
       <tbody>
         {vips.map((v, i) => (
-          <tr key={v.name} style={{ background: i % 2 ? F5.rowAlt : "white" }}>
-            <td className="px-3 py-1.5 border" style={{ borderColor: F5.border }}>
+          <tr key={v.name} style={{ background: i % 2 ? UI.rowAlt : "white" }}>
+            <td className="px-3 py-1.5 border" style={{ borderColor: UI.border }}>
               <StatusDot up={!!v.pool_name} />
               {v.pool_name ? "Available" : "Offline"}
             </td>
-            <td className="px-3 py-1.5 border" style={{ borderColor: F5.border }}>
-              <button onClick={() => onOpen(v)} className="hover:underline" style={{ color: F5.link }}>
+            <td className="px-3 py-1.5 border" style={{ borderColor: UI.border }}>
+              <button onClick={() => onOpen(v)} className="hover:underline" style={{ color: UI.link }}>
                 {v.name.replace("/Common/", "")}
               </button>
             </td>
-            <td className="px-3 py-1.5 border font-mono text-[12px]" style={{ borderColor: F5.border }}>
+            <td className="px-3 py-1.5 border font-mono text-[12px]" style={{ borderColor: UI.border }}>
               {v.destination_address}
             </td>
-            <td className="px-3 py-1.5 border" style={{ borderColor: F5.border }}>
+            <td className="px-3 py-1.5 border" style={{ borderColor: UI.border }}>
               {v.destination_port} ({v.ip_protocol ?? "tcp"})
             </td>
-            <td className="px-3 py-1.5 border" style={{ borderColor: F5.border }}>
+            <td className="px-3 py-1.5 border" style={{ borderColor: UI.border }}>
               Standard
             </td>
-            <td className="px-3 py-1.5 border" style={{ borderColor: F5.border }}>
+            <td className="px-3 py-1.5 border" style={{ borderColor: UI.border }}>
               {v.pool_name ? v.pool_name.replace("/Common/", "") : "None"}
             </td>
-            <td className="px-3 py-1.5 border" style={{ borderColor: F5.border }}>
+            <td className="px-3 py-1.5 border" style={{ borderColor: UI.border }}>
               Common
             </td>
           </tr>
@@ -189,7 +189,7 @@ function VirtualServerListView({ vips, onOpen }: { vips: Vip[]; onOpen: (v: Vip)
   );
 }
 
-export function F5GuiPreview({
+export function GuiPreview({
   vip,
   pool,
   allVips,
@@ -299,7 +299,7 @@ export function F5GuiPreview({
     >
       <div
         className="w-[97vw] max-h-[95vh] rounded-md shadow-2xl overflow-hidden flex flex-col shrink-0"
-        style={{ background: F5.white, color: F5.textValue }}
+        style={{ background: UI.white, color: UI.textValue }}
         onClick={(e) => e.stopPropagation()}
       >
         {/* fake browser chrome for realism */}
@@ -309,21 +309,24 @@ export function F5GuiPreview({
           <span className="h-2.5 w-2.5 rounded-full bg-green-400" />
           <span
             className="ml-3 flex-1 text-[11px] rounded px-2 py-0.5 font-mono truncate"
-            style={{ color: F5.textLabel, background: F5.white }}
+            style={{ color: UI.textLabel, background: UI.white }}
           >
-            https://&lt;bigip-host&gt;/tmui/Control/jspmap/tmui/locallb/virtual/{view === "properties" ? "properties.jsp" : "list.jsp"}
+            https://&lt;device-host&gt;/config/network/virtual-servers/{view === "properties" ? "properties" : "list"}
           </span>
-          <button onClick={onClose} className="text-sm px-2" style={{ color: F5.textLabel }}>
+          <button onClick={onClose} className="text-sm px-2" style={{ color: UI.textLabel }}>
             ×
           </button>
         </div>
 
-        {/* F5 top bar */}
-        <div className="flex items-center justify-between px-4 py-2" style={{ background: F5.bar }}>
+        {/* device console top bar */}
+        <div className="flex items-center justify-between px-4 py-2" style={{ background: UI.bar }}>
           <div className="flex items-center gap-3">
-            <span className="text-white font-bold text-lg tracking-tight">
-              <span style={{ color: "#e2231a" }}>F5</span>
-              <span className="text-slate-300 font-normal text-xs ml-2">BIG-IP® Configuration Utility</span>
+            <span className="text-white font-bold text-lg tracking-tight flex items-center">
+              <span
+                className="inline-block h-2.5 w-2.5 rounded-sm mr-2"
+                style={{ background: "var(--cyan, #22d3ee)" }}
+              />
+              <span className="text-slate-300 font-normal text-xs">Device Configuration Utility</span>
             </span>
           </div>
           <div className="text-slate-300 text-xs">Partition: Common &nbsp;|&nbsp; admin &nbsp;|&nbsp; Log off</div>
@@ -331,12 +334,12 @@ export function F5GuiPreview({
 
         <div className="flex flex-1 min-h-0">
           {/* left nav */}
-          <div className="w-48 shrink-0 text-[13px] py-2 overflow-y-auto" style={{ background: F5.navy }}>
+          <div className="w-48 shrink-0 text-[13px] py-2 overflow-y-auto" style={{ background: UI.navy }}>
             {["Statistics", "iApps", "Local Traffic", "Network", "System"].map((item) => (
               <div key={item}>
                 <div
                   className="px-3 py-1.5 text-slate-200"
-                  style={item === "Local Traffic" ? { background: F5.navyActive, color: "white", fontWeight: 600 } : undefined}
+                  style={item === "Local Traffic" ? { background: UI.navyActive, color: "white", fontWeight: 600 } : undefined}
                 >
                   {item}
                 </div>
@@ -361,30 +364,30 @@ export function F5GuiPreview({
           <div className="flex-1 min-w-0 min-h-0 flex flex-col">
             <div
               className="px-4 py-2 text-[12px]"
-              style={{ background: F5.breadcrumb, borderBottom: `1px solid ${F5.border}`, color: F5.textLabel }}
+              style={{ background: UI.breadcrumb, borderBottom: `1px solid ${UI.border}`, color: UI.textLabel }}
             >
               Local Traffic » Virtual Servers » Virtual Server List
               {view === "properties" && (
                 <>
                   {" » "}
-                  <span className="font-medium" style={{ color: F5.textValue }}>
+                  <span className="font-medium" style={{ color: UI.textValue }}>
                     {openVip.name.replace("/Common/", "")}
                   </span>
                 </>
               )}
             </div>
-            <div className="flex gap-4 px-4 pt-2 text-[13px]" style={{ borderBottom: `1px solid ${F5.border}` }}>
+            <div className="flex gap-4 px-4 pt-2 text-[13px]" style={{ borderBottom: `1px solid ${UI.border}` }}>
               <button
                 onClick={() => setView("list")}
                 className="pb-2 px-1"
-                style={view === "list" ? { borderBottom: `2px solid ${F5.navyActive}`, color: F5.navyActive, fontWeight: 600 } : { color: "#64748b" }}
+                style={view === "list" ? { borderBottom: `2px solid ${UI.navyActive}`, color: UI.navyActive, fontWeight: 600 } : { color: "#64748b" }}
               >
                 Virtual Server List
               </button>
               <button
                 onClick={() => setView("properties")}
                 className="pb-2 px-1"
-                style={view === "properties" ? { borderBottom: `2px solid ${F5.navyActive}`, color: F5.navyActive, fontWeight: 600 } : { color: "#64748b" }}
+                style={view === "properties" ? { borderBottom: `2px solid ${UI.navyActive}`, color: UI.navyActive, fontWeight: 600 } : { color: "#64748b" }}
               >
                 Properties
               </button>
@@ -394,7 +397,7 @@ export function F5GuiPreview({
                 <VirtualServerListView vips={allVips} onOpen={openDifferentVip} />
               ) : (
                 <>
-                  <table className="w-full border-collapse" style={{ border: `1px solid ${F5.border}` }}>
+                  <table className="w-full border-collapse" style={{ border: `1px solid ${UI.border}` }}>
                     <tbody>
                       <SectionHeader label="General Properties" />
                       <EditableRow label="Name" value={fields.name.replace("/Common/", "")} dirty={dirty.name} onChange={(v) => setFields((f) => ({ ...f, name: v.startsWith("/") ? v : `/Common/${v}` }))} />
@@ -458,24 +461,24 @@ export function F5GuiPreview({
                               <table className="w-full text-[12px]">
                                 <thead>
                                   <tr style={{ background: "#dfe6ec" }}>
-                                    <th className="text-left px-3 py-1.5 border" style={{ borderColor: F5.border }}>Status</th>
-                                    <th className="text-left px-3 py-1.5 border" style={{ borderColor: F5.border }}>Member</th>
-                                    <th className="text-left px-3 py-1.5 border" style={{ borderColor: F5.border }}>Address</th>
-                                    <th className="text-left px-3 py-1.5 border" style={{ borderColor: F5.border }}>Port</th>
+                                    <th className="text-left px-3 py-1.5 border" style={{ borderColor: UI.border }}>Status</th>
+                                    <th className="text-left px-3 py-1.5 border" style={{ borderColor: UI.border }}>Member</th>
+                                    <th className="text-left px-3 py-1.5 border" style={{ borderColor: UI.border }}>Address</th>
+                                    <th className="text-left px-3 py-1.5 border" style={{ borderColor: UI.border }}>Port</th>
                                   </tr>
                                 </thead>
                                 <tbody>
                                   {pool.members.map((m, i) => (
-                                    <tr key={`${m.node_name}:${m.port}`} style={{ background: i % 2 ? F5.rowAlt : "white" }}>
-                                      <td className="px-3 py-1.5 border" style={{ borderColor: F5.border }}>
+                                    <tr key={`${m.node_name}:${m.port}`} style={{ background: i % 2 ? UI.rowAlt : "white" }}>
+                                      <td className="px-3 py-1.5 border" style={{ borderColor: UI.border }}>
                                         <StatusDot up={m.session_state !== "user-disabled"} />
                                         {m.session_state === "user-disabled" ? "Disabled" : "Available"}
                                       </td>
-                                      <td className="px-3 py-1.5 border" style={{ borderColor: F5.border }}>{m.node_name.replace("/Common/", "")}</td>
-                                      <td className="px-3 py-1.5 border font-mono" style={{ borderColor: F5.border }}>
+                                      <td className="px-3 py-1.5 border" style={{ borderColor: UI.border }}>{m.node_name.replace("/Common/", "")}</td>
+                                      <td className="px-3 py-1.5 border font-mono" style={{ borderColor: UI.border }}>
                                         {nodesByName[m.node_name]?.address ?? "—"}
                                       </td>
-                                      <td className="px-3 py-1.5 border" style={{ borderColor: F5.border }}>{m.port}</td>
+                                      <td className="px-3 py-1.5 border" style={{ borderColor: UI.border }}>{m.port}</td>
                                     </tr>
                                   ))}
                                 </tbody>
@@ -492,18 +495,18 @@ export function F5GuiPreview({
                       onClick={handlePreviewTmsh}
                       disabled={!hasChanges || busy}
                       className="px-4 py-1.5 text-[13px] text-white rounded disabled:opacity-40 disabled:cursor-not-allowed"
-                      style={{ background: F5.navyActive }}
+                      style={{ background: UI.navyActive }}
                     >
                       {busy ? "Computing…" : "Update"}
                     </button>
                     <button
                       className="px-4 py-1.5 text-[13px] border rounded"
-                      style={{ borderColor: F5.border, color: F5.textLabel }}
+                      style={{ borderColor: UI.border, color: UI.textLabel }}
                     >
                       Delete
                     </button>
                     {hasChanges && !busy && (
-                      <span className="text-[12px]" style={{ color: F5.textLabel }}>
+                      <span className="text-[12px]" style={{ color: UI.textLabel }}>
                         Click Update to compute the real TMSH command for the field(s) you changed.
                       </span>
                     )}
@@ -515,7 +518,7 @@ export function F5GuiPreview({
                         <span className="h-2 w-2 rounded-full" style={{ background: "#ff5c5c" }} />
                         <span className="h-2 w-2 rounded-full" style={{ background: "#ffbd2e" }} />
                         <span className="h-2 w-2 rounded-full" style={{ background: "#27c93f" }} />
-                        <span className="ml-2 text-[10px]" style={{ color: F5.textDim }}>
+                        <span className="ml-2 text-[10px]" style={{ color: UI.textDim }}>
                           tmsh — computed by the same engine as Step 5
                         </span>
                       </div>
@@ -530,8 +533,8 @@ export function F5GuiPreview({
           </div>
         </div>
 
-        <div className="px-4 py-1.5 text-[11px] border-t" style={{ borderColor: F5.border, color: F5.textMuted }}>
-          Preview only — recreates the BIG-IP Configuration Utility layout from parsed data; edits here compute real TMSH via the backend but are never applied to a live device. Not affiliated with F5, Inc.
+        <div className="px-4 py-1.5 text-[11px] border-t" style={{ borderColor: UI.border, color: UI.textMuted }}>
+          Preview only — recreates a device configuration console layout from parsed data; edits here compute real TMSH via the backend but are never applied to a live device.
         </div>
       </div>
     </div>,

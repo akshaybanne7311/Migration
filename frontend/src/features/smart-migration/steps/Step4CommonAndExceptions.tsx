@@ -218,11 +218,11 @@ export function Step4CommonAndExceptions() {
         <Checkbox
           checked={createNetworkObjects}
           onChange={setCreateNetworkObjects}
-          label="Create BIG-IP network objects (net vlan) for new VLANs"
+          label="Create device network objects (net vlan) for new VLANs"
         />
         <p className="text-xs text-slate-500 mt-2 pl-6">
-          VLAN object creation is OFF by default for rSeries/F5OS, where VLANs are typically
-          managed externally. When off, only the VIP's VLAN binding is changed.
+          VLAN object creation is OFF by default for platforms where VLANs are typically managed
+          externally. When off, only the VIP's VLAN binding is changed.
         </p>
       </Card>
     </div>

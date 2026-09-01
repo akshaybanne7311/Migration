@@ -1,7 +1,8 @@
 """VLAN reference check -- the fix for "misleading BLOCKED status for
-externally managed F5OS VLANs". A VLAN with no local `net vlan` object is
+externally managed VLANs on hardware platforms where VLAN objects live
+outside this tool's control". A VLAN with no local `net vlan` object is
 only ever BLOCKED when the plan explicitly opted into owning VLAN
-lifecycle (create_network_objects=True); by default (rSeries/F5OS, where
+lifecycle (create_network_objects=True); by default (platforms where
 VLANs are typically externally managed) it is a WARN, never BLOCKED.
 """
 from app.models.validation import Severity, ValidationCheck
@@ -38,8 +39,8 @@ def check(vi: ValidationInput) -> ValidationCheck:
             id="vlan_refs",
             label="VLAN references",
             severity=Severity.WARN,
-            details="externally managed (rSeries/F5OS) -- no local net vlan "
-            "object expected",
+            details="externally managed -- no local net vlan object expected "
+            "on this platform",
             affected=warned,
         )
     return ValidationCheck(

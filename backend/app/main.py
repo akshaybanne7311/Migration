@@ -11,7 +11,7 @@ logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s %(levelname)s %(name)s %(message)s",
 )
-logger = logging.getLogger("f5ci")
+logger = logging.getLogger("config_intel")
 
 app = FastAPI(title="Config Intelligence API", version="0.1.0")
 

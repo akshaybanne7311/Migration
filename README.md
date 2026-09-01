@@ -10,15 +10,15 @@
 </p>
 
 <p align="center">
-  F5 BIG-IP configuration intelligence and bulk VIP migration — ingest a UCS/QKView/<code>bigip.conf</code>,
-  plan changes across hundreds of VIPs with a dependency-aware wizard, and generate real TMSH/REST/AS3 output.
+  Network device configuration intelligence and bulk VIP migration — ingest a UCS/QKView/<code>bigip.conf</code>-style
+  archive, plan changes across hundreds of VIPs with a dependency-aware wizard, and generate real TMSH/REST/AS3 output.
 </p>
 
 ---
 
 ## What it does
 
-- **Ingests** BIG-IP UCS archives, QKViews, or raw `bigip.conf` files with a real tokenizer + recursive-descent
+- **Ingests** UCS archives, QKViews, or raw device configuration files with a real tokenizer + recursive-descent
   parser (not regex) — correctly handles IPv4/IPv6 destinations, route domains, and shared nodes/pools/VLANs.
 - **Smart Migration wizard** — select VIPs, review current config, choose changes (common + per-VIP exceptions),
   and validate/generate — built so a network engineer never needs to understand the dependency graph underneath.
@@ -27,7 +27,7 @@
   new device.
 - **TMSH / REST / AS3 generation** from one shared resolved-plan representation, so the three outputs can never
   drift from each other.
-- **F5 GUI preview** — an editable recreation of the BIG-IP Configuration Utility. Change a field, and it computes
+- **GUI preview** — an editable recreation of a device configuration console. Change a field, and it computes
   the real TMSH command for that edit through the same backend engine the wizard uses — not a second, guessable
   formatter.
 - **Excel & SOP export** — a real `.xlsx` workbook and a Word runbook (pre-migration checklist, validation
@@ -35,13 +35,13 @@
 
 ## Screenshots
 
-| Smart Migration — Validate & Generate | F5 GUI Preview — editable |
+| Smart Migration — Validate & Generate | GUI Preview — editable |
 |---|---|
-| ![Smart Migration Step 5](docs/screenshots/smart-migration-step5.png) | ![F5 GUI Preview](docs/screenshots/f5-gui-preview.png) |
+| ![Smart Migration Step 5](docs/screenshots/smart-migration-step5.png) | ![GUI Preview](docs/screenshots/gui-preview.png) |
 
-| F5 GUI Preview — Virtual Server List | Light theme |
+| GUI Preview — Virtual Server List | Light theme |
 |---|---|
-| ![F5 GUI list view](docs/screenshots/f5-gui-list.png) | ![Light theme](docs/screenshots/vips-light-theme.png) |
+| ![GUI list view](docs/screenshots/gui-list.png) | ![Light theme](docs/screenshots/vips-light-theme.png) |
 
 ## Run with Docker (production-style)
 
@@ -51,7 +51,7 @@ docker compose up --build
 
 - Frontend: http://localhost:8080
 - Backend API: proxied through the frontend at `/api/v1/...` (not exposed directly by default)
-- Session data (uploaded archives + parsed session DBs) persists in the `f5ci-data` named volume across restarts
+- Session data (uploaded archives + parsed session DBs) persists in the `cfgi-data` named volume across restarts
 
 Override with environment variables (or a `.env` file next to `docker-compose.yml`):
 
@@ -59,8 +59,8 @@ Override with environment variables (or a `.env` file next to `docker-compose.ym
 |---|---|---|
 | `FRONTEND_PORT` | `8080` | Host port the UI is served on |
 | `BACKEND_WORKERS` | `4` | Gunicorn/Uvicorn worker count |
-| `F5CI_CORS_ORIGINS_RAW` | `http://localhost:8080` | Comma-separated allowed CORS origins |
-| `F5CI_MAX_UPLOAD_BYTES` | `536870912` (512 MB) | Upload size cap |
+| `CFGI_CORS_ORIGINS_RAW` | `http://localhost:8080` | Comma-separated allowed CORS origins |
+| `CFGI_MAX_UPLOAD_BYTES` | `536870912` (512 MB) | Upload size cap |
 
 ## Run locally for development
 
@@ -95,7 +95,7 @@ they cannot drift from each other. See `backend/app/` module docstrings for the 
 change engine, and generator design notes.
 
 ```
-UCS/QKView/bigip.conf
+UCS/QKView/config archive
   → tokenizer + recursive-descent parser
   → typed domain objects (Vip, Pool, Node, Vlan, Monitor, Profile)
   → SQLite session store
@@ -109,14 +109,14 @@ UCS/QKView/bigip.conf
 
 **Verified, re-confirmed as of this commit:**
 - 78/78 backend tests passing
-- Zero console/page errors across all 15 frontend routes, including interactive flows (F5 GUI Preview edit,
+- Zero console/page errors across all 15 frontend routes, including interactive flows (GUI Preview edit,
   theme toggle)
 
 **Known gaps — not yet built:**
-- Not validated against a real production UCS file — everything above runs against a synthetic fixture
+- Not validated against a real production configuration export — everything above runs against a synthetic fixture
 - SNAT pools (translation address pools), self-IPs, and route-domain objects aren't modeled as first-class
   objects yet (route domain *suffix* parsing on a VIP destination — the `%N` in `2001:db8::1%10` — is handled;
-  a dedicated `net route-domain` object is not)
+  a dedicated route-domain object is not)
 - Docker deployment files are written but not build-tested end-to-end in this environment
 
 Treat this as a well-tested planning/generation tool against the data it's actually been run against — not yet

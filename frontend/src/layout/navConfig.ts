@@ -24,7 +24,7 @@ export const navGroups: NavGroup[] = [
       { label: "Pools", path: "/pools" },
       { label: "Nodes", path: "/nodes" },
       { label: "System Config", path: "/system-config" },
-      { label: "F5 GUI Preview", path: "/f5-gui" },
+      { label: "GUI Preview", path: "/gui-preview" },
     ],
   },
   {

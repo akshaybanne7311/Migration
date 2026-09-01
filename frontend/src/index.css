@@ -1,7 +1,7 @@
 @import "tailwindcss";
 
 /* ============================================================
-   F5 Config Intelligence — neon / HUD theme
+   Config Intelligence — neon / HUD theme
    Every rule below sits outside any @layer, so per CSS cascade
    rules it beats Tailwind's own @layer utilities regardless of
    source order — this reskins every component that already uses
