@@ -154,9 +154,26 @@ export interface ValidationCheck {
   affected: string[];
 }
 
+export interface MigrationSummary {
+  vips_selected: number;
+  vips_changed: number;
+  vips_unchanged: number;
+  pools_affected: number;
+  nodes_affected: number;
+  profiles_affected: number;
+  vlan_bindings_changed: number;
+  pool_member_edits: number;
+  objects_created: number;
+  objects_modified: number;
+  objects_removed: number;
+  warnings: number;
+  errors: number;
+}
+
 export interface ValidationResult {
   checks: ValidationCheck[];
   overall: "READY" | "BLOCKED";
+  summary?: MigrationSummary | null;
 }
 
 export interface RestCall {

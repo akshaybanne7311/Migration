@@ -71,6 +71,7 @@ def session_maps(ready_session_id: str):
     from app.graph.builder import build_dependency_graph
     from app.storage import session_db
     from app.storage.repositories import (
+        MonitorRepository,
         NodeRepository,
         PoolRepository,
         VipRepository,
@@ -82,6 +83,7 @@ def session_maps(ready_session_id: str):
     pools_by_name = {p.name: p for p in PoolRepository.list(conn)}
     vips_by_name = {v.name: v for v in VipRepository.list(conn)}
     vlans_by_name = {v.name: v for v in VlanRepository.list(conn)}
+    monitors_by_name = {m.name: m for m in MonitorRepository.list(conn)}
     graph = build_dependency_graph(conn)
     return {
         "session_id": ready_session_id,
@@ -90,5 +92,6 @@ def session_maps(ready_session_id: str):
         "pools_by_name": pools_by_name,
         "vips_by_name": vips_by_name,
         "vlans_by_name": vlans_by_name,
+        "monitors_by_name": monitors_by_name,
         "graph": graph,
     }

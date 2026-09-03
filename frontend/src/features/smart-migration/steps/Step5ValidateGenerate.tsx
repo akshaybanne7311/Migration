@@ -250,7 +250,7 @@ export function Step5ValidateGenerate() {
   return (
     <div>
       <div className="mb-5">
-        <div className="text-sm font-medium text-slate-800 mb-2">Migration Summary</div>
+        <div className="text-sm font-medium text-slate-800 mb-2">Selection</div>
         <div className="flex flex-wrap gap-3">
           <KpiCard label="VIPs selected" value={kpis?.vips ?? 0} />
           <KpiCard label="Pools" value={kpis?.pools ?? 0} />
@@ -259,6 +259,29 @@ export function Step5ValidateGenerate() {
           <KpiCard label="VLAN references" value={kpis?.vlan_refs ?? 0} />
         </div>
       </div>
+
+      {validation?.summary && (
+        <div className="mb-5">
+          <div className="text-sm font-medium text-slate-800 mb-2">
+            Migration Summary <span className="text-xs font-normal text-slate-400">— what will actually change</span>
+          </div>
+          <div className="flex flex-wrap gap-3">
+            <KpiCard
+              label="VIPs changed / unchanged"
+              value={`${validation.summary.vips_changed} / ${validation.summary.vips_unchanged}`}
+            />
+            <KpiCard label="Pools affected" value={validation.summary.pools_affected} />
+            <KpiCard label="Nodes affected" value={validation.summary.nodes_affected} />
+            <KpiCard label="VLAN bindings changed" value={validation.summary.vlan_bindings_changed} />
+            <KpiCard label="Pool member edits" value={validation.summary.pool_member_edits} />
+            <KpiCard label="Objects to create" value={validation.summary.objects_created} />
+            <KpiCard label="Objects to modify" value={validation.summary.objects_modified} />
+            <KpiCard label="Objects to remove" value={validation.summary.objects_removed} />
+            <KpiCard label="Warnings" value={validation.summary.warnings} />
+            <KpiCard label="Errors" value={validation.summary.errors} />
+          </div>
+        </div>
+      )}
 
       <div className="mb-5">
         <div className="text-sm font-medium text-slate-800 mb-2">Output mode</div>

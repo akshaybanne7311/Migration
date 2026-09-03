@@ -41,6 +41,18 @@
 - **Node deletion with a real safety check** — a pool member removal can optionally delete the underlying node
   object too; blocked if any other pool in the session still references that node, so a shared node can never
   be deleted out from under a pool this plan didn't touch.
+- **Inline config review (Step 2)** — real current pool members (node, resolved IP, port, session state), VLANs,
+  and profiles are shown directly per selected VIP, expandable/collapsible for large selections — no click into
+  a side panel required to see what a VIP actually looks like today.
+- **Point-and-click pool member editing (Step 4)** — pick specific members to remove from a VIP's actual current
+  pool (not typed by hand) and add new ones, without needing a CSV for a one-off change.
+- **Live affected-count preview** on the VIP-name find/replace card — shows exactly how many selected VIPs
+  match and a before/after example, before you commit to the change.
+- **Real migration summary before generating** — VIPs changed vs. unchanged, pools/nodes affected, VLAN
+  bindings changed, objects to create/modify/remove, and warning/error counts, computed from the same resolved
+  plan the generators read from (never a separate estimate that can drift from the actual output).
+- **Monitor-reference validation** — pointing a VIP's monitor at a name that doesn't exist in the parsed
+  session is caught and blocked before generation, not discovered when the script fails on the device.
 
 ## Screenshots
 
@@ -92,7 +104,7 @@ npm run dev   # http://localhost:5173, proxies /api to :8000
 ## Tests
 
 ```bash
-cd backend && source .venv/bin/activate && pytest       # 109 tests
+cd backend && source .venv/bin/activate && pytest       # 112 tests
 cd frontend && npx tsc --noEmit
 ```
 
@@ -117,12 +129,16 @@ UCS/QKView/config archive
 ## Status
 
 **Verified, re-confirmed as of this commit:**
-- 109/109 backend tests passing
+- 112/112 backend tests passing
 - Pool rename and node-deletion safety re-verified live against the API: renaming a shared pool now validates
   READY and emits `tmsh mv`; deleting a node still used by another pool is BLOCKED with the specific pool
   named, deleting an unshared one generates the `tmsh delete` command and REST `DELETE` call correctly
 - CSV bulk import re-verified end-to-end in a live browser (all 4 formats hit the real API, merge into
   the wizard, validate as READY, and generate correct TMSH) — zero console/page errors observed
+- Step 2's inline review, Step 3's VIP-name affected-count preview, Step 4's point-and-click pool member
+  editor, and Step 5's real migration summary all re-verified live in a browser against the synthetic
+  fixture (including actually applying a member removal through to a correct generated TMSH line) — zero
+  console/page errors observed
 - Frontend type-checks and builds clean (`tsc -b && vite build`)
 
 **Known gaps — not yet built:**

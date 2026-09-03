@@ -4,12 +4,14 @@ from app.validation.checks import (
     duplicates,
     ipv4_syntax,
     ipv6_syntax,
+    monitor_refs,
     node_refs,
     pool_members,
     tmsh_syntax,
     vlan_refs,
 )
 from app.validation.context import ValidationInput
+from app.validation.summary import build_migration_summary
 
 
 def run_validation(vi: ValidationInput) -> ValidationResult:
@@ -21,7 +23,9 @@ def run_validation(vi: ValidationInput) -> ValidationResult:
         vlan_refs.check(vi),
         pool_members.check(vi),
         node_refs.check(vi),
+        monitor_refs.check(vi),
         tmsh_syntax.check(vi),
     ]
     overall = "BLOCKED" if any(c.severity == Severity.BLOCKED for c in checks) else "READY"
-    return ValidationResult(checks=checks, overall=overall)
+    summary = build_migration_summary(vi.resolved, checks)
+    return ValidationResult(checks=checks, overall=overall, summary=summary)

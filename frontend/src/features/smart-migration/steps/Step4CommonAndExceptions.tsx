@@ -1,7 +1,7 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { api } from "../../../api/client";
-import { useValidatedSession, useVips } from "../../../api/queries";
-import type { CsvImportType, NodeChange, VipException } from "../../../api/types";
+import { usePools, useValidatedSession, useVips } from "../../../api/queries";
+import type { CsvImportType, MemberRef, NodeChange, Pool, PoolMemberEdit, Vip, VipException } from "../../../api/types";
 import { toast } from "../../../components/toastStore";
 import { Button, Card, Checkbox } from "../../../components/ui";
 import { useWizardStore } from "../state/wizardStore";
@@ -218,10 +218,150 @@ function NodeChangesPanel() {
   );
 }
 
+function PoolMemberExceptionEditor({ vip, pool }: { vip: Vip; pool: Pool | undefined }) {
+  const poolMemberEdits = useWizardStore((s) => s.poolMemberEdits);
+  const setPoolMemberEdits = useWizardStore((s) => s.setPoolMemberEdits);
+  const [removeKeys, setRemoveKeys] = useState<Set<string>>(new Set());
+  const [pendingAdds, setPendingAdds] = useState<MemberRef[]>([]);
+  const [addAddress, setAddAddress] = useState("");
+  const [addPort, setAddPort] = useState("");
+  const [addNodeName, setAddNodeName] = useState("");
+
+  useEffect(() => {
+    setRemoveKeys(new Set());
+    setPendingAdds([]);
+  }, [vip.name]);
+
+  function toggleRemove(key: string) {
+    setRemoveKeys((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  }
+
+  function addPendingMember() {
+    if (!addAddress || !addPort) return;
+    setPendingAdds((prev) => [
+      ...prev,
+      { address: addAddress, port: Number(addPort), node_name: addNodeName || undefined },
+    ]);
+    setAddAddress("");
+    setAddPort("");
+    setAddNodeName("");
+  }
+
+  function apply() {
+    const old_refs: MemberRef[] = (pool?.members ?? [])
+      .filter((m) => removeKeys.has(`${m.node_name}:${m.port}`))
+      .map((m) => ({ node_name: m.node_name, port: m.port }));
+    if (old_refs.length === 0 && pendingAdds.length === 0) return;
+    const edit: PoolMemberEdit = {
+      vip_name: vip.name,
+      action: "replace_selected",
+      old_refs,
+      new_refs: pendingAdds,
+    };
+    setPoolMemberEdits([...poolMemberEdits.filter((e) => e.vip_name !== vip.name), edit]);
+    setRemoveKeys(new Set());
+    setPendingAdds([]);
+  }
+
+  if (!pool || pool.members.length === 0) {
+    return (
+      <p className="text-xs text-slate-400 mt-2">
+        {vip.pool_name ? "No members parsed for this VIP's pool." : "This VIP has no pool."}
+      </p>
+    );
+  }
+
+  const existingEdit = poolMemberEdits.find((e) => e.vip_name === vip.name);
+
+  return (
+    <div className="mt-2 border border-slate-200 rounded-md p-3">
+      <div className="text-xs font-medium text-slate-700 mb-2">Pool members — {pool.name}</div>
+      {existingEdit && (
+        <p className="text-xs text-emerald-700 mb-2">
+          A pool member change is already queued for this VIP ({existingEdit.old_refs.length} removed,{" "}
+          {existingEdit.new_refs.length} added). Applying below replaces it.
+        </p>
+      )}
+      <div className="space-y-1 mb-2">
+        {pool.members.map((m) => {
+          const key = `${m.node_name}:${m.port}`;
+          const checked = removeKeys.has(key);
+          return (
+            <label key={key} className="flex items-center gap-2 text-xs cursor-pointer">
+              <input type="checkbox" checked={checked} onChange={() => toggleRemove(key)} />
+              <span className="font-mono">
+                {m.node_name}:{m.port}
+              </span>
+              {checked && <span className="text-red-600">remove</span>}
+            </label>
+          );
+        })}
+      </div>
+
+      {pendingAdds.length > 0 && (
+        <div className="space-y-1 mb-2">
+          {pendingAdds.map((r, i) => (
+            <div
+              key={i}
+              className="flex items-center justify-between text-xs bg-emerald-50 rounded px-2 py-1"
+            >
+              <span className="font-mono">
+                {r.node_name ? `${r.node_name} ` : ""}
+                {r.address}:{r.port} (add)
+              </span>
+              <button
+                onClick={() => setPendingAdds(pendingAdds.filter((_, idx) => idx !== i))}
+                className="text-slate-400 hover:text-red-600"
+              >
+                ×
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <div className="grid grid-cols-3 gap-2 mb-2">
+        <input
+          className="border border-slate-300 rounded-md px-2 py-1.5 text-xs"
+          placeholder="New member address"
+          value={addAddress}
+          onChange={(e) => setAddAddress(e.target.value)}
+        />
+        <input
+          className="border border-slate-300 rounded-md px-2 py-1.5 text-xs"
+          placeholder="Port"
+          value={addPort}
+          onChange={(e) => setAddPort(e.target.value)}
+        />
+        <input
+          className="border border-slate-300 rounded-md px-2 py-1.5 text-xs"
+          placeholder="Node name (optional)"
+          value={addNodeName}
+          onChange={(e) => setAddNodeName(e.target.value)}
+        />
+      </div>
+      <div className="flex items-center gap-3">
+        <button onClick={addPendingMember} className="text-xs font-medium text-blue-700 hover:underline">
+          + Add to list
+        </button>
+        <Button variant="secondary" onClick={apply}>
+          Apply pool member changes
+        </Button>
+      </div>
+    </div>
+  );
+}
+
 function ExceptionsAccordion() {
   const { sessionId } = useValidatedSession();
   const selectedVipNames = useWizardStore((s) => s.selectedVipNames);
   const { data: vipsData } = useVips(sessionId);
+  const { data: poolsData } = usePools(sessionId);
   const exceptions = useWizardStore((s) => s.exceptions);
   const setExceptions = useWizardStore((s) => s.setExceptions);
 
@@ -232,6 +372,8 @@ function ExceptionsAccordion() {
   const [targetPool, setTargetPool] = useState("");
 
   const selectedVips = (vipsData?.items ?? []).filter((v) => selectedVipNames.has(v.name));
+  const poolsByName = Object.fromEntries((poolsData?.items ?? []).map((p) => [p.name, p]));
+  const selectedVip = selectedVips.find((v) => v.name === vipName);
 
   function addException() {
     if (!vipName) return;
@@ -334,6 +476,13 @@ function ExceptionsAccordion() {
           <Button variant="secondary" onClick={addException}>
             Add exception
           </Button>
+
+          {selectedVip && (
+            <PoolMemberExceptionEditor
+              vip={selectedVip}
+              pool={selectedVip.pool_name ? poolsByName[selectedVip.pool_name] : undefined}
+            />
+          )}
         </div>
       )}
     </Card>

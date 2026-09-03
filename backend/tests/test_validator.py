@@ -33,6 +33,7 @@ def _validate(session_maps, plan: MigrationPlan):
         pools_by_name=session_maps["pools_by_name"],
         vips_by_name=session_maps["vips_by_name"],
         vlans_by_name=session_maps["vlans_by_name"],
+        monitors_by_name=session_maps["monitors_by_name"],
     )
     return run_validation(vi)
 
@@ -154,3 +155,56 @@ def test_ready_when_no_issues(session_maps):
     result = _validate(session_maps, plan)
     assert result.overall == "READY"
     assert all(c.severity != Severity.BLOCKED for c in result.checks)
+
+
+def test_blocked_on_unresolvable_monitor_reference(session_maps):
+    plan = MigrationPlan(
+        session_id=session_maps["session_id"],
+        selected_vips=["/Common/VS-WEB-HTTP-80"],
+        common_changes=[
+            CommonChange(change_type=ChangeType.MONITOR, payload={"new_monitor": "/Common/DOES-NOT-EXIST"})
+        ],
+    )
+    result = _validate(session_maps, plan)
+    monitor_check = next(c for c in result.checks if c.id == "monitor_refs")
+    assert monitor_check.severity == Severity.BLOCKED
+    assert result.overall == "BLOCKED"
+    assert any("DOES-NOT-EXIST" in a for a in monitor_check.affected)
+
+
+def test_ready_when_monitor_reference_exists(session_maps):
+    plan = MigrationPlan(
+        session_id=session_maps["session_id"],
+        selected_vips=["/Common/VS-WEB-HTTP-80"],
+        common_changes=[
+            CommonChange(change_type=ChangeType.MONITOR, payload={"new_monitor": "/Common/WEB-HTTP-Monitor"})
+        ],
+    )
+    result = _validate(session_maps, plan)
+    monitor_check = next(c for c in result.checks if c.id == "monitor_refs")
+    assert monitor_check.severity == Severity.PASS
+    assert result.overall == "READY"
+
+
+def test_migration_summary_counts_real_changes(session_maps):
+    plan = MigrationPlan(
+        session_id=session_maps["session_id"],
+        selected_vips=["/Common/VS-WEB-HTTP-80", "/Common/VS-WEB-REJECT"],
+        common_changes=[
+            CommonChange(
+                change_type=ChangeType.VLANS,
+                payload={"old_vlan": "/Common/WEB-VLAN-200", "new_vlan": "/Common/WEB-VLAN-201"},
+            )
+        ],
+    )
+    result = _validate(session_maps, plan)
+    summary = result.summary
+    assert summary is not None
+    assert summary.vips_selected == 2
+    # only VS-WEB-HTTP-80 actually has WEB-VLAN-200 bound -- VS-WEB-REJECT
+    # has no vlans at all, so the common change is a real no-op for it
+    assert summary.vips_changed == 2  # both get the effective payload...
+    assert summary.vlan_bindings_changed == 1  # ...but only one is a real delta
+    # WEB-VLAN-201 has no local net vlan object in the fixture -- a real WARN
+    assert summary.warnings == 1
+    assert summary.errors == 0

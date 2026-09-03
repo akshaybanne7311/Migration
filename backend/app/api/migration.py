@@ -42,17 +42,18 @@ def _load_context_maps(conn: sqlite3.Connection):
     pools_by_name = {p.name: p for p in PoolRepository.list(conn)}
     vips_by_name = {v.name: v for v in VipRepository.list(conn)}
     vlans_by_name = {v.name: v for v in VlanRepository.list(conn)}
-    return nodes_by_name, pools_by_name, vips_by_name, vlans_by_name
+    monitors_by_name = {m.name: m for m in MonitorRepository.list(conn)}
+    return nodes_by_name, pools_by_name, vips_by_name, vlans_by_name, monitors_by_name
 
 
 def _resolve_or_error(conn: sqlite3.Connection, plan: MigrationPlan):
-    nodes_by_name, pools_by_name, vips_by_name, vlans_by_name = _load_context_maps(conn)
+    nodes_by_name, pools_by_name, vips_by_name, vlans_by_name, monitors_by_name = _load_context_maps(conn)
     graph = build_dependency_graph(conn)
     try:
         resolved = resolve(plan, nodes_by_name, pools_by_name, vips_by_name, graph)
     except (ChangeEngineError, NodeCascadeError) as exc:
-        return None, str(exc), (nodes_by_name, pools_by_name, vips_by_name, vlans_by_name)
-    return resolved, None, (nodes_by_name, pools_by_name, vips_by_name, vlans_by_name)
+        return None, str(exc), (nodes_by_name, pools_by_name, vips_by_name, vlans_by_name, monitors_by_name)
+    return resolved, None, (nodes_by_name, pools_by_name, vips_by_name, vlans_by_name, monitors_by_name)
 
 
 class CsvImportResult(BaseModel):
@@ -85,7 +86,7 @@ async def import_csv_rules(
         raise HTTPException(status_code=400, detail="CSV file must be UTF-8 encoded")
 
     vip_list = [v for v in (s.strip() for s in selected_vips.split(",")) if v]
-    nodes_by_name, pools_by_name, vips_by_name, _vlans_by_name = _load_context_maps(conn)
+    nodes_by_name, pools_by_name, vips_by_name, _vlans_by_name, _monitors_by_name = _load_context_maps(conn)
 
     try:
         if csv_type == "vip_changes":
@@ -170,7 +171,7 @@ def validate_migration_plan(
         )
         return ValidationResult(checks=[check], overall="BLOCKED")
 
-    nodes_by_name, pools_by_name, vips_by_name, vlans_by_name = maps
+    nodes_by_name, pools_by_name, vips_by_name, vlans_by_name, monitors_by_name = maps
     context = build_migration_context(resolved, nodes_by_name, pools_by_name, vips_by_name)
     vi = ValidationInput(
         resolved=resolved,
@@ -179,6 +180,7 @@ def validate_migration_plan(
         pools_by_name=pools_by_name,
         vips_by_name=vips_by_name,
         vlans_by_name=vlans_by_name,
+        monitors_by_name=monitors_by_name,
     )
     return run_validation(vi)
 
@@ -195,7 +197,7 @@ def generate_migration_outputs(
     if resolved is None:
         raise HTTPException(status_code=422, detail=error)
 
-    nodes_by_name, pools_by_name, vips_by_name, vlans_by_name = maps
+    nodes_by_name, pools_by_name, vips_by_name, vlans_by_name, monitors_by_name = maps
     context = build_migration_context(resolved, nodes_by_name, pools_by_name, vips_by_name)
     vi = ValidationInput(
         resolved=resolved,
@@ -204,6 +206,7 @@ def generate_migration_outputs(
         pools_by_name=pools_by_name,
         vips_by_name=vips_by_name,
         vlans_by_name=vlans_by_name,
+        monitors_by_name=monitors_by_name,
     )
     validation = run_validation(vi)
     if validation.overall == "BLOCKED":
@@ -213,7 +216,6 @@ def generate_migration_outputs(
         )
 
     if plan.output_mode == "full_recreate":
-        monitors_by_name = {m.name: m for m in MonitorRepository.list(conn)}
         units = build_full_recreate_units(
             plan.selected_vips, context, nodes_by_name, pools_by_name, vips_by_name, monitors_by_name
         )

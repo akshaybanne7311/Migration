@@ -2,9 +2,11 @@ import { useMemo, useState } from "react";
 import { useNodes, usePools, useValidatedSession, useVips } from "../../../api/queries";
 import type { Vip } from "../../../api/types";
 import { VipDetailDrawer } from "../../../components/VipDetailDrawer";
-import { VipSummaryTable } from "../../../components/VipSummaryTable";
-import { Card, EmptyState } from "../../../components/ui";
+import { EmptyState } from "../../../components/ui";
 import { useWizardStore } from "../state/wizardStore";
+import { VipReviewCard } from "../components/VipReviewCard";
+
+const AUTO_EXPAND_THRESHOLD = 3;
 
 export function Step2ReviewConfig() {
   const { sessionId } = useValidatedSession();
@@ -12,7 +14,7 @@ export function Step2ReviewConfig() {
   const { data: vipsData } = useVips(sessionId);
   const { data: poolsData, isLoading: poolsLoading } = usePools(sessionId);
   const { data: nodesData } = useNodes(sessionId);
-  const [selectedVip, setSelectedVip] = useState<Vip | null>(null);
+  const [fullConfigVip, setFullConfigVip] = useState<Vip | null>(null);
 
   const poolsByName = useMemo(
     () => Object.fromEntries((poolsData?.items ?? []).map((p) => [p.name, p])),
@@ -32,30 +34,45 @@ export function Step2ReviewConfig() {
     return <EmptyState title="No VIPs selected" subtitle="Go back to Step 1 to select VIPs." />;
   }
 
+  const autoExpand = selectedVips.length <= AUTO_EXPAND_THRESHOLD;
+
   return (
     <div>
       <p className="text-sm text-slate-500 mb-4">
-        Review the current configuration for the {selectedVips.length} selected VIP
-        {selectedVips.length === 1 ? "" : "s"}. Click a row for full detail, including current
-        pool members.
+        Current configuration for the {selectedVips.length} selected VIP
+        {selectedVips.length === 1 ? "" : "s"} — pool members, VLANs, and profiles shown here are
+        what exists today, before any change is applied.
+        {!autoExpand && " Click a card to expand its detail."}
       </p>
-      <Card>
-        <VipSummaryTable
-          vips={selectedVips}
-          poolsByName={poolsByName}
-          onRowClick={(v) => setSelectedVip(v)}
-        />
-      </Card>
+      <div className="space-y-2">
+        {selectedVips.map((vip) => (
+          <div key={vip.name}>
+            <VipReviewCard
+              vip={vip}
+              pool={vip.pool_name ? poolsByName[vip.pool_name] : undefined}
+              poolsLoading={poolsLoading}
+              nodesByName={nodesByName}
+              defaultOpen={autoExpand}
+            />
+            <button
+              onClick={() => setFullConfigVip(vip)}
+              className="text-xs text-blue-700 hover:underline mt-1 ml-1"
+            >
+              View full parsed configuration →
+            </button>
+          </div>
+        ))}
+      </div>
 
-      {selectedVip && (
+      {fullConfigVip && (
         <VipDetailDrawer
-          vip={selectedVip}
-          pool={selectedVip.pool_name ? poolsByName[selectedVip.pool_name] : undefined}
+          vip={fullConfigVip}
+          pool={fullConfigVip.pool_name ? poolsByName[fullConfigVip.pool_name] : undefined}
           poolsLoading={poolsLoading}
           nodesByName={nodesByName}
           allVips={selectedVips}
           sessionId={sessionId}
-          onClose={() => setSelectedVip(null)}
+          onClose={() => setFullConfigVip(null)}
         />
       )}
     </div>

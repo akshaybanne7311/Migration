@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
+import { useValidatedSession, useVips } from "../../../api/queries";
 import type { ChangeType, PoolMemberEdit } from "../../../api/types";
 import { ChangeTypeCheckboxCard, TextField } from "../components/ChangeTypeCheckboxCard";
 import { useWizardStore } from "../state/wizardStore";
@@ -22,6 +23,13 @@ export function Step3ChooseChanges() {
   const selectedVipNames = useWizardStore((s) => s.selectedVipNames);
   const poolMemberEdits = useWizardStore((s) => s.poolMemberEdits);
   const setPoolMemberEdits = useWizardStore((s) => s.setPoolMemberEdits);
+
+  const { sessionId } = useValidatedSession();
+  const { data: vipsData } = useVips(sessionId);
+  const selectedVips = useMemo(
+    () => (vipsData?.items ?? []).filter((v) => selectedVipNames.has(v.name)),
+    [vipsData, selectedVipNames],
+  );
 
   const [poolMemberAddress, setPoolMemberAddress] = useState("");
   const [poolMemberPort, setPoolMemberPort] = useState("");
@@ -75,6 +83,27 @@ export function Step3ChooseChanges() {
                     })
                   }
                 />
+                {(() => {
+                  const find = (commonChanges.vip_name?.payload.find as string) ?? "";
+                  const replace = (commonChanges.vip_name?.payload.replace as string) ?? "";
+                  if (!find) return null;
+                  const matches = selectedVips.filter((v) => v.name.includes(find));
+                  return (
+                    <p className="text-xs text-slate-400">
+                      {matches.length} of {selectedVips.length} selected VIP
+                      {selectedVips.length === 1 ? "" : "s"} affected
+                      {matches.length > 0 && replace && (
+                        <>
+                          {" "}
+                          — e.g.{" "}
+                          <span className="font-mono">
+                            {matches[0].name} → {matches[0].name.replace(find, replace)}
+                          </span>
+                        </>
+                      )}
+                    </p>
+                  );
+                })()}
               </>
             )}
 
