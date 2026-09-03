@@ -121,6 +121,15 @@ export interface VipException {
   overrides: Partial<Record<ChangeType, Record<string, unknown>>>;
 }
 
+export type CsvImportType = "vip_changes" | "vlan_rules" | "pool_members" | "node_changes";
+
+export interface CsvImportResult {
+  exceptions: VipException[];
+  node_changes: NodeChange[];
+  pool_member_edits: PoolMemberEdit[];
+  row_count: number;
+}
+
 export type OutputMode = "changes_only" | "full_recreate";
 
 export interface MigrationPlan {

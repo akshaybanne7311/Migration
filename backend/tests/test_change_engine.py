@@ -272,3 +272,84 @@ def test_vlan_common_change_preserves_vlans_enabled(session_maps):
     rv = resolved.resolved_vlan_changes[0]
     assert rv.new_vlans == ["/Common/MNP-VLAN-1700"]
     assert rv.vlans_enabled is True
+
+
+def test_vlan_remove_only_actually_removes(session_maps):
+    """Real gap found comparing against another implementation's docs: a
+    remove-only VLAN request (old_vlan set, no new_vlan) used to silently
+    fall through to a no-op branch and do nothing."""
+    plan = MigrationPlan(
+        session_id=session_maps["session_id"],
+        selected_vips=["/Common/VS-MNP-BL-SIP-5060-IPv6"],
+        common_changes=[
+            CommonChange(change_type=ChangeType.VLANS, payload={"old_vlan": "/Common/MNP-VLAN-1699"})
+        ],
+    )
+    resolved = resolve(
+        plan,
+        session_maps["nodes_by_name"],
+        session_maps["pools_by_name"],
+        session_maps["vips_by_name"],
+        session_maps["graph"],
+    )
+    rv = resolved.resolved_vlan_changes[0]
+    assert rv.new_vlans == []
+
+
+def test_vlan_add_only_appends_without_duplicating(session_maps):
+    plan = MigrationPlan(
+        session_id=session_maps["session_id"],
+        selected_vips=["/Common/VS-MNP-BL-SIP-5060-IPv6"],
+        common_changes=[
+            CommonChange(change_type=ChangeType.VLANS, payload={"new_vlan": "/Common/EXTRA-VLAN"})
+        ],
+    )
+    resolved = resolve(
+        plan,
+        session_maps["nodes_by_name"],
+        session_maps["pools_by_name"],
+        session_maps["vips_by_name"],
+        session_maps["graph"],
+    )
+    rv = resolved.resolved_vlan_changes[0]
+    assert rv.new_vlans == ["/Common/MNP-VLAN-1699", "/Common/EXTRA-VLAN"]
+
+    # adding a VLAN that's already bound must not duplicate it
+    plan_dup = MigrationPlan(
+        session_id=session_maps["session_id"],
+        selected_vips=["/Common/VS-MNP-BL-SIP-5060-IPv6"],
+        common_changes=[
+            CommonChange(change_type=ChangeType.VLANS, payload={"new_vlan": "/Common/MNP-VLAN-1699"})
+        ],
+    )
+    resolved_dup = resolve(
+        plan_dup,
+        session_maps["nodes_by_name"],
+        session_maps["pools_by_name"],
+        session_maps["vips_by_name"],
+        session_maps["graph"],
+    )
+    assert resolved_dup.resolved_vlan_changes[0].new_vlans == ["/Common/MNP-VLAN-1699"]
+
+
+def test_vlan_explicit_action_overrides_inference(session_maps):
+    """Passing both old_vlan and new_vlan but action='remove' should remove
+    old_vlan and ignore new_vlan, not infer a replace."""
+    plan = MigrationPlan(
+        session_id=session_maps["session_id"],
+        selected_vips=["/Common/VS-MNP-BL-SIP-5060-IPv6"],
+        common_changes=[
+            CommonChange(
+                change_type=ChangeType.VLANS,
+                payload={"old_vlan": "/Common/MNP-VLAN-1699", "new_vlan": "/Common/IGNORED", "action": "remove"},
+            )
+        ],
+    )
+    resolved = resolve(
+        plan,
+        session_maps["nodes_by_name"],
+        session_maps["pools_by_name"],
+        session_maps["vips_by_name"],
+        session_maps["graph"],
+    )
+    assert resolved.resolved_vlan_changes[0].new_vlans == []

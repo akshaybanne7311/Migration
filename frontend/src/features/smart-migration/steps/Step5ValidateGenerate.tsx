@@ -141,6 +141,14 @@ export function Step5ValidateGenerate() {
   const { sessionId, session } = useValidatedSession();
   const selectedVipNames = useWizardStore((s) => s.selectedVipNames);
   const chosenChangeTypes = useWizardStore((s) => s.chosenChangeTypes);
+  const exceptions = useWizardStore((s) => s.exceptions);
+  const nodeChanges = useWizardStore((s) => s.nodeChanges);
+  const poolMemberEdits = useWizardStore((s) => s.poolMemberEdits);
+  const hasAnyChange =
+    chosenChangeTypes.size > 0 ||
+    exceptions.length > 0 ||
+    nodeChanges.length > 0 ||
+    poolMemberEdits.length > 0;
   const { data: kpis } = useSelectionKpis(sessionId, Array.from(selectedVipNames));
   const { data: vipsData } = useVips(sessionId);
   const planId = useWizardStore((s) => s.planId);
@@ -291,12 +299,12 @@ export function Step5ValidateGenerate() {
         </div>
       </div>
 
-      {outputMode === "changes_only" && selectedVipNames.size > 0 && chosenChangeTypes.size === 0 && (
+      {outputMode === "changes_only" && selectedVipNames.size > 0 && !hasAnyChange && (
         <div className="mb-4 px-4 py-2.5 rounded-md text-xs bg-amber-50 border border-amber-200 text-amber-700 max-w-xl">
-          No change types are checked in Step 3, so "Apply changes" mode has nothing to emit and
-          Generate will produce an empty script. Either check a change type in Choose Changes, or
-          switch to "Full recreate for a new device" above if you just want these VIPs stood up
-          as-is.
+          No changes are configured yet, so "Apply changes" mode has nothing to emit and Generate
+          will produce an empty script. Choose a change type in Step 3, add an exception or CSV
+          import in Step 4, or switch to "Full recreate for a new device" above if you just want
+          these VIPs stood up as-is.
         </div>
       )}
 

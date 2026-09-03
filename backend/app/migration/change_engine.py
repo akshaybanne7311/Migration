@@ -179,10 +179,27 @@ def resolve(
         vip = vips_by_name[vc.vip_name]
         old_vlan = vlan_payload.get("old_vlan")
         new_vlan = vlan_payload.get("new_vlan")
-        if old_vlan and new_vlan:
+        action = vlan_payload.get("action")  # "replace" | "remove" | "add"; inferred if omitted
+        if action is None:
+            if old_vlan and new_vlan:
+                action = "replace"
+            elif old_vlan:
+                action = "remove"
+            elif new_vlan:
+                action = "add"
+            else:
+                action = "noop"
+
+        if action == "replace" and old_vlan and new_vlan:
             new_vlans = [new_vlan if v == old_vlan else v for v in vip.vlans]
-        elif new_vlan:
-            new_vlans = list(vip.vlans) + [new_vlan]
+        elif action == "remove" and old_vlan:
+            # Real gap this fixes: a VLAN-only-remove request (old_vlan set,
+            # no new_vlan) used to fall through to the no-op branch below
+            # and silently do nothing -- the operator's remove request was
+            # dropped with zero indication anything was wrong.
+            new_vlans = [v for v in vip.vlans if v != old_vlan]
+        elif action == "add" and new_vlan:
+            new_vlans = list(vip.vlans) if new_vlan in vip.vlans else list(vip.vlans) + [new_vlan]
         else:
             new_vlans = list(vip.vlans)
         resolved_vlan_changes.append(

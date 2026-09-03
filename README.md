@@ -32,6 +32,9 @@
   formatter.
 - **Excel & SOP export** — a real `.xlsx` workbook and a Word runbook (pre-migration checklist, validation
   results, numbered TMSH steps, sign-off table) generated from the same plan data.
+- **CSV bulk import** — prepare VIP renames/re-IPs, VLAN add/remove/replace rules, pool member changes, and
+  node IP changes offline in a spreadsheet and import them in one shot instead of clicking through exceptions
+  one VIP at a time; downloadable templates for all four formats are built into the wizard.
 
 ## Screenshots
 
@@ -83,7 +86,7 @@ npm run dev   # http://localhost:5173, proxies /api to :8000
 ## Tests
 
 ```bash
-cd backend && source .venv/bin/activate && pytest       # 78 tests
+cd backend && source .venv/bin/activate && pytest       # 98 tests
 cd frontend && npx tsc --noEmit
 ```
 
@@ -108,9 +111,10 @@ UCS/QKView/config archive
 ## Status
 
 **Verified, re-confirmed as of this commit:**
-- 78/78 backend tests passing
-- Zero console/page errors across all 15 frontend routes, including interactive flows (GUI Preview edit,
-  theme toggle)
+- 98/98 backend tests passing
+- CSV bulk import re-verified end-to-end in a live browser (all 4 formats hit the real API, merge into
+  the wizard, validate as READY, and generate correct TMSH) — zero console/page errors observed
+- Frontend type-checks and builds clean (`tsc -b && vite build`)
 
 **Known gaps — not yet built:**
 - Not validated against a real production configuration export — everything above runs against a synthetic fixture

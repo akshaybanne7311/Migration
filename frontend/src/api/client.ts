@@ -1,5 +1,7 @@
 import axios from "axios";
 import type {
+  CsvImportResult,
+  CsvImportType,
   GenerateResult,
   MigrationPlan,
   NodeObj,
@@ -109,4 +111,15 @@ export const api = {
     http
       .post<GenerateResult>(`/sessions/${sessionId}/migration-plans/${planId}/generate`)
       .then((r) => r.data),
+  importCsv: (sessionId: string, csvType: CsvImportType, selectedVips: string[], file: File) => {
+    const form = new FormData();
+    form.append("csv_type", csvType);
+    form.append("selected_vips", selectedVips.join(","));
+    form.append("file", file);
+    return http
+      .post<CsvImportResult>(`/sessions/${sessionId}/migration-plans/import-csv`, form, {
+        headers: { "Content-Type": "multipart/form-data" },
+      })
+      .then((r) => r.data);
+  },
 };

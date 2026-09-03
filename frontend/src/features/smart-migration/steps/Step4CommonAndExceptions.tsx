@@ -1,8 +1,141 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
+import { api } from "../../../api/client";
 import { useValidatedSession, useVips } from "../../../api/queries";
-import type { NodeChange, VipException } from "../../../api/types";
+import type { CsvImportType, NodeChange, VipException } from "../../../api/types";
+import { toast } from "../../../components/toastStore";
 import { Button, Card, Checkbox } from "../../../components/ui";
 import { useWizardStore } from "../state/wizardStore";
+
+const CSV_TEMPLATES: Record<CsvImportType, { label: string; hint: string; header: string; example: string }> = {
+  vip_changes: {
+    label: "Bulk VIP changes",
+    hint: "Rename VIPs, re-IP/re-port them, or rename their pool — one row per VIP.",
+    header: "source_vip,target_vip_name,target_vip_ip,target_vip_port,target_pool_name",
+    example: "/Common/VS-EXAMPLE,/Common/VS-EXAMPLE-NEW,203.0.113.50,443,/Common/POOL-EXAMPLE-NEW",
+  },
+  vlan_rules: {
+    label: "VLAN rules",
+    hint: "Leave vip_name blank to apply a rule to every currently selected VIP.",
+    header: "vip_name,action,old_vlan,new_vlan",
+    example: ",replace,/Common/VLAN-OLD,/Common/VLAN-NEW",
+  },
+  pool_members: {
+    label: "Pool member rules",
+    hint: "Applies to every currently selected VIP whose pool matches source_pool.",
+    header: "source_pool,action,source_member_node,source_member_port,target_node,target_address,target_port",
+    example: "/Common/POOL-EXAMPLE,add,,,,203.0.113.60,80",
+  },
+  node_changes: {
+    label: "Node IP changes",
+    hint: "Same effect as the Node IP Changes table below, in bulk.",
+    header: "source_node,new_ip,new_node_name",
+    example: "/Common/NODE-EXAMPLE,203.0.113.70,",
+  },
+};
+
+function CsvBulkImportPanel() {
+  const { sessionId } = useValidatedSession();
+  const selectedVipNames = useWizardStore((s) => s.selectedVipNames);
+  const exceptions = useWizardStore((s) => s.exceptions);
+  const setExceptions = useWizardStore((s) => s.setExceptions);
+  const nodeChanges = useWizardStore((s) => s.nodeChanges);
+  const setNodeChanges = useWizardStore((s) => s.setNodeChanges);
+  const poolMemberEdits = useWizardStore((s) => s.poolMemberEdits);
+  const setPoolMemberEdits = useWizardStore((s) => s.setPoolMemberEdits);
+
+  const [csvType, setCsvType] = useState<CsvImportType>("vip_changes");
+  const [busy, setBusy] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  function downloadTemplate() {
+    const t = CSV_TEMPLATES[csvType];
+    const blob = new Blob([`${t.header}\n${t.example}\n`], { type: "text/csv;charset=utf-8" });
+    import("file-saver").then(({ saveAs }) => saveAs(blob, `${csvType}-template.csv`));
+  }
+
+  async function handleFile(file: File) {
+    setBusy(true);
+    try {
+      const result = await api.importCsv(
+        sessionId as string,
+        csvType,
+        Array.from(selectedVipNames),
+        file,
+      );
+
+      if (result.exceptions.length > 0) {
+        // Later rows win for the same VIP+change-type, matching how
+        // exceptions are merged everywhere else in the wizard.
+        const byVip = new Map(exceptions.map((e) => [e.vip_name, e]));
+        for (const incoming of result.exceptions) {
+          const existing = byVip.get(incoming.vip_name);
+          byVip.set(incoming.vip_name, {
+            vip_name: incoming.vip_name,
+            overrides: { ...existing?.overrides, ...incoming.overrides },
+          });
+        }
+        setExceptions(Array.from(byVip.values()));
+      }
+      if (result.node_changes.length > 0) {
+        setNodeChanges([...nodeChanges, ...result.node_changes]);
+      }
+      if (result.pool_member_edits.length > 0) {
+        setPoolMemberEdits([...poolMemberEdits, ...result.pool_member_edits]);
+      }
+
+      toast("success", `Imported ${result.row_count} row${result.row_count === 1 ? "" : "s"} from CSV.`);
+    } catch {
+      // The axios interceptor already toasts the error message (including
+      // the parser's row-level detail from the backend).
+    } finally {
+      setBusy(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  }
+
+  return (
+    <Card className="p-4">
+      <div className="text-sm font-medium text-slate-800 mb-1">Bulk import from CSV</div>
+      <p className="text-xs text-slate-500 mb-3">
+        Prepare changes offline in a spreadsheet and import them in one shot instead of adding
+        exceptions one VIP at a time. Imported rows merge into the tables on this page — review
+        them below before generating.
+      </p>
+
+      <div className="grid grid-cols-2 gap-2 mb-2">
+        <select
+          className="border border-slate-300 rounded-md px-2 py-1.5 text-xs col-span-2"
+          value={csvType}
+          onChange={(e) => setCsvType(e.target.value as CsvImportType)}
+        >
+          {(Object.keys(CSV_TEMPLATES) as CsvImportType[]).map((t) => (
+            <option key={t} value={t}>
+              {CSV_TEMPLATES[t].label}
+            </option>
+          ))}
+        </select>
+      </div>
+      <p className="text-xs text-slate-400 mb-3">{CSV_TEMPLATES[csvType].hint}</p>
+
+      <div className="flex items-center gap-2">
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept=".csv,text/csv"
+          disabled={busy}
+          onChange={(e) => {
+            const file = e.target.files?.[0];
+            if (file) handleFile(file);
+          }}
+          className="text-xs"
+        />
+        <Button variant="secondary" onClick={downloadTemplate}>
+          Download template
+        </Button>
+      </div>
+    </Card>
+  );
+}
 
 function NodeChangesPanel() {
   const nodeChanges = useWizardStore((s) => s.nodeChanges);
@@ -212,6 +345,7 @@ export function Step4CommonAndExceptions() {
 
   return (
     <div className="space-y-4">
+      <CsvBulkImportPanel />
       <NodeChangesPanel />
       <ExceptionsAccordion />
       <Card className="p-4">

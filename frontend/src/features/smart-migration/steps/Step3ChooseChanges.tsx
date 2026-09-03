@@ -143,6 +143,9 @@ export function Step3ChooseChanges() {
 
             {type === "vlans" && (
               <>
+                <p className="text-xs text-slate-400 -mt-1 mb-1">
+                  Fill both to replace. Old VLAN only removes it. New VLAN only adds it.
+                </p>
                 <TextField
                   label="Old VLAN"
                   value={(commonChanges.vlans?.payload.old_vlan as string) ?? ""}
