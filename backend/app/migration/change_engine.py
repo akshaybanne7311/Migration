@@ -29,6 +29,48 @@ class ChangeEngineError(Exception):
     pass
 
 
+def _apply_string_pattern(original: str, payload: Dict) -> str:
+    find = payload.get("find")
+    replace = payload.get("replace")
+    if find is not None and replace is not None:
+        return original.replace(find, replace)
+    return original
+
+
+def _resolve_pool_renames(
+    vip_changes: List[ResolvedVipChange], vips_by_name: Dict[str, Vip]
+) -> Dict[str, str]:
+    """A VIP_NAME-style POOL_NAME override doesn't just repoint the VIP at a
+    differently-spelled pool -- every UI/CSV path that sets it computes the
+    new value by pattern-matching against the VIP's own current pool_name,
+    so it's always really "rename the pool this VIP already uses." Without
+    this, the underlying `ltm pool` object was never renamed, leaving the
+    VIP pointed at a pool name nothing else defines -- exactly the
+    "unresolved reference" BLOCKED result a rename should never hit.
+    """
+    renames: Dict[str, str] = {}
+    for vc in vip_changes:
+        payload = vc.effective.get(ChangeType.POOL_NAME)
+        if not payload:
+            continue
+        vip = vips_by_name[vc.vip_name]
+        if not vip.pool_name:
+            continue
+        new_name = _apply_string_pattern(vip.pool_name, payload)
+        if new_name == vip.pool_name:
+            continue
+        existing = renames.get(vip.pool_name)
+        if existing is not None and existing != new_name:
+            raise ChangeEngineError(
+                "conflicting pool renames: %s is targeted as both %s and %s by "
+                "different VIPs -- since it's the same underlying pool, rename "
+                "it once (e.g. via a common change) instead of per-VIP "
+                "exceptions that disagree" % (vip.pool_name, existing, new_name)
+            )
+        renames[vip.pool_name] = new_name
+    return renames
+
+
 def _resolve_member_ref(ref: MemberRef, nodes_by_name: Dict[str, Node]) -> ResolvedMember:
     if ref.node_name:
         known = ref.node_name in nodes_by_name
@@ -50,8 +92,9 @@ def resolve_pool_member_edits(
     vips_by_name: Dict[str, Vip],
     pools_by_name: Dict[str, Pool],
     nodes_by_name: Dict[str, Node],
-) -> List[ResolvedPoolMemberChange]:
+) -> "tuple[List[ResolvedPoolMemberChange], List[str]]":
     results: List[ResolvedPoolMemberChange] = []
+    node_deletions: List[str] = []
 
     for edit in edits:
         vip = vips_by_name.get(edit.vip_name)
@@ -82,11 +125,13 @@ def resolve_pool_member_edits(
             remove_keys = {(r.node_name, r.port) for r in edit.old_refs if r.node_name}
             old_members = [m for m in current if (m.node_name, m.port) in remove_keys]
             new_members = [m for m in current if (m.node_name, m.port) not in remove_keys]
+            node_deletions.extend(r.node_name for r in edit.old_refs if r.node_name and r.remove_node)
         elif edit.action == "replace_selected":
             remove_keys = {(r.node_name, r.port) for r in edit.old_refs if r.node_name}
             old_members = [m for m in current if (m.node_name, m.port) in remove_keys]
             kept = [m for m in current if (m.node_name, m.port) not in remove_keys]
             new_members = kept + [_resolve_member_ref(r, nodes_by_name) for r in edit.new_refs]
+            node_deletions.extend(r.node_name for r in edit.old_refs if r.node_name and r.remove_node)
         else:
             raise ChangeEngineError("unknown pool member edit action %r" % edit.action)
 
@@ -101,7 +146,7 @@ def resolve_pool_member_edits(
         )
 
     _check_no_conflicting_pool_edits(results)
-    return results
+    return results, sorted(set(node_deletions))
 
 
 def _member_key_set(members: List[ResolvedMember]):
@@ -167,7 +212,7 @@ def resolve(
 
     resolved_node_changes = resolve_node_changes(plan.node_changes, nodes_by_name, graph)
 
-    resolved_pool_member_changes = resolve_pool_member_edits(
+    resolved_pool_member_changes, node_deletions = resolve_pool_member_edits(
         plan.pool_member_edits, vips_by_name, pools_by_name, nodes_by_name
     )
 
@@ -211,11 +256,15 @@ def resolve(
             )
         )
 
+    pool_renames = _resolve_pool_renames(vip_changes, vips_by_name)
+
     return ResolvedMigrationPlan(
         session_id=plan.session_id,
         vip_changes=vip_changes,
         resolved_node_changes=resolved_node_changes,
         resolved_pool_member_changes=resolved_pool_member_changes,
         resolved_vlan_changes=resolved_vlan_changes,
+        pool_renames=pool_renames,
+        node_deletions=node_deletions,
         create_network_objects=plan.create_network_objects,
     )

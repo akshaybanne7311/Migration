@@ -102,6 +102,33 @@ def test_blocked_on_duplicate_name_conflict(session_maps):
     assert result.overall == "BLOCKED"
 
 
+def test_blocked_on_duplicate_pool_rename_target(session_maps):
+    # WEB-POOL-1 and WEB-POOL-2 are distinct pools; renaming both to the
+    # same target name must be blocked rather than silently colliding.
+    plan = MigrationPlan(
+        session_id=session_maps["session_id"],
+        selected_vips=["/Common/VS-WEB-HTTP-80", "/Common/VS-WEB-HTTP-8080"],
+        exceptions=[
+            VipException(
+                vip_name="/Common/VS-WEB-HTTP-80",
+                overrides={
+                    ChangeType.POOL_NAME: {"find": "/Common/WEB-POOL-1", "replace": "/Common/WEB-POOL-SHARED"}
+                },
+            ),
+            VipException(
+                vip_name="/Common/VS-WEB-HTTP-8080",
+                overrides={
+                    ChangeType.POOL_NAME: {"find": "/Common/WEB-POOL-2", "replace": "/Common/WEB-POOL-SHARED"}
+                },
+            ),
+        ],
+    )
+    result = _validate(session_maps, plan)
+    dup_check = next(c for c in result.checks if c.id == "duplicates")
+    assert dup_check.severity == Severity.BLOCKED
+    assert result.overall == "BLOCKED"
+
+
 def test_blocked_on_empty_pool_members_when_source_had_members(session_maps):
     plan = MigrationPlan(
         session_id=session_maps["session_id"],

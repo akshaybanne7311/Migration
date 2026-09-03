@@ -41,6 +41,15 @@ def generate_rest(context: MigrationContext, vips_by_name: Dict[str, Vip]) -> Li
             )
         )
 
+    for old_name, new_name in context.pool_renames.items():
+        calls.append(
+            RestCall(
+                method="PATCH",
+                path="/mgmt/tm/ltm/pool/%s" % _rest_encode(old_name),
+                body={"name": new_name},
+            )
+        )
+
     for vip_name, effective in context.vip_effective.items():
         if not effective:
             continue
@@ -78,5 +87,10 @@ def generate_rest(context: MigrationContext, vips_by_name: Dict[str, Vip]) -> Li
                     body=body,
                 )
             )
+
+    for node_name in context.node_deletions:
+        calls.append(
+            RestCall(method="DELETE", path="/mgmt/tm/ltm/node/%s" % _rest_encode(node_name), body={})
+        )
 
     return calls

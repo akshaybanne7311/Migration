@@ -101,6 +101,7 @@ export interface MemberRef {
   address?: string | null;
   new_node_name?: string | null;
   port: number;
+  remove_node?: boolean;
 }
 
 export interface PoolMemberEdit {

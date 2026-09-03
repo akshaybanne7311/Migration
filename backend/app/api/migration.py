@@ -223,7 +223,7 @@ def generate_migration_outputs(
     else:
         tmsh = generate_tmsh(context, vips_by_name)
         rest_calls = generate_rest(context, vips_by_name)
-        as3 = generate_as3(context, vips_by_name)
+        as3 = generate_as3(context, vips_by_name, pools_by_name, nodes_by_name)
 
     return {
         "tmsh": tmsh,

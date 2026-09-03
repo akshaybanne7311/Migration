@@ -24,6 +24,16 @@ def check(vi: ValidationInput) -> ValidationCheck:
                 % (", ".join(sources), target)
             )
 
+    pool_target_to_sources = {}
+    for old_pool, new_pool in vi.context.pool_renames.items():
+        pool_target_to_sources.setdefault(new_pool, []).append(old_pool)
+    for target, sources in pool_target_to_sources.items():
+        if len(set(sources)) > 1:
+            affected.append(
+                "multiple pools (%s) renamed to the same new pool name %s"
+                % (", ".join(sources), target)
+            )
+
     severity = Severity.BLOCKED if affected else Severity.PASS
     return ValidationCheck(
         id="duplicates",

@@ -108,6 +108,26 @@ class TestParsePoolMemberRulesCsv:
         assert result[0].vip_name == "/Common/VS-A"
         assert result[0].new_refs[0].address == "203.0.113.50"
 
+    def test_remove_node_column_sets_flag_on_old_ref(self):
+        csv_content = (
+            "source_pool,action,source_member_node,source_member_port,remove_node\n"
+            "/Common/POOL-A,remove,/Common/NODE-1,80,true\n"
+        )
+        result = parse_pool_member_rules_csv(
+            csv_content, ["/Common/VS-A"], VIPS_BY_NAME, POOLS_BY_NAME
+        )
+        assert result[0].old_refs[0].remove_node is True
+
+    def test_remove_node_column_defaults_false(self):
+        csv_content = (
+            "source_pool,action,source_member_node,source_member_port\n"
+            "/Common/POOL-A,remove,/Common/NODE-1,80\n"
+        )
+        result = parse_pool_member_rules_csv(
+            csv_content, ["/Common/VS-A"], VIPS_BY_NAME, POOLS_BY_NAME
+        )
+        assert result[0].old_refs[0].remove_node is False
+
     def test_remove_all_maps_to_replace_all_with_no_members(self):
         csv_content = "source_pool,action\n/Common/POOL-A,remove_all\n"
         result = parse_pool_member_rules_csv(

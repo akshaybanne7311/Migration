@@ -8,7 +8,12 @@ def check(vi: ValidationInput) -> ValidationCheck:
     for vip_name, effective in vi.context.vip_effective.items():
         vip = vi.vips_by_name[vip_name]
         pool_name = effective.get("pool_name") or vip.pool_name
-        if pool_name and pool_name not in vi.pools_by_name and pool_name not in vi.context.pool_effective_members:
+        if (
+            pool_name
+            and pool_name not in vi.pools_by_name
+            and pool_name not in vi.context.pool_effective_members
+            and pool_name not in vi.context.pool_renames.values()
+        ):
             affected.append("%s -> pool %s" % (vip_name, pool_name))
 
     for pool_name, members in vi.context.pool_effective_members.items():

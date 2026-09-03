@@ -20,6 +20,8 @@ class MigrationContext:
     new_nodes: Dict[str, Any] = field(default_factory=dict)  # new_node_name -> ResolvedNodeChange
     old_to_new_node_name: Dict[str, str] = field(default_factory=dict)
     pool_effective_members: Dict[str, List[ResolvedMember]] = field(default_factory=dict)
+    pool_renames: Dict[str, str] = field(default_factory=dict)  # old pool name -> new pool name
+    node_deletions: List[str] = field(default_factory=list)
     vip_effective: Dict[str, Dict[str, Any]] = field(default_factory=dict)
     create_network_objects: bool = False
 
@@ -98,7 +100,13 @@ def build_migration_context(
 
         pool_name_payload = vc.effective.get(ChangeType.POOL_NAME)
         if pool_name_payload and vip.pool_name:
-            fields["pool_name"] = _apply_string_pattern(vip.pool_name, pool_name_payload)
+            # Same-source-of-truth as the pool rename itself: change_engine
+            # already computed the resolved new name (with conflict
+            # detection across VIPs sharing the pool), so read it back
+            # instead of re-deriving it here and risking the two disagree.
+            fields["pool_name"] = resolved.pool_renames.get(
+                vip.pool_name, _apply_string_pattern(vip.pool_name, pool_name_payload)
+            )
 
         persistence_payload = vc.effective.get(ChangeType.PERSISTENCE)
         if persistence_payload and persistence_payload.get("new_persistence") is not None:
@@ -125,6 +133,8 @@ def build_migration_context(
         new_nodes=new_nodes,
         old_to_new_node_name=old_to_new,
         pool_effective_members=pool_effective_members,
+        pool_renames=dict(resolved.pool_renames),
+        node_deletions=list(resolved.node_deletions),
         vip_effective=vip_effective,
         create_network_objects=resolved.create_network_objects,
     )

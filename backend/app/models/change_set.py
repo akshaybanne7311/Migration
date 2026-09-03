@@ -29,6 +29,7 @@ class MemberRef(BaseModel):
     address: Optional[str] = None
     new_node_name: Optional[str] = None
     port: int
+    remove_node: bool = False  # only meaningful on a "remove" action's old_refs
 
 
 class PoolMemberEdit(BaseModel):
@@ -108,4 +109,6 @@ class ResolvedMigrationPlan(BaseModel):
     resolved_node_changes: List[ResolvedNodeChange] = Field(default_factory=list)
     resolved_pool_member_changes: List[ResolvedPoolMemberChange] = Field(default_factory=list)
     resolved_vlan_changes: List[ResolvedVlanChange] = Field(default_factory=list)
+    pool_renames: Dict[str, str] = Field(default_factory=dict)  # old pool name -> new pool name
+    node_deletions: List[str] = Field(default_factory=list)  # node names to delete once unreferenced
     create_network_objects: bool = False

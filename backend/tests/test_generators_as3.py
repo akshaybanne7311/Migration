@@ -26,7 +26,9 @@ def test_as3_lossy_annotations_present_for_unmappable_fields(session_maps):
         session_maps["pools_by_name"],
         session_maps["vips_by_name"],
     )
-    output = generate_as3(context, session_maps["vips_by_name"])
+    output = generate_as3(
+        context, session_maps["vips_by_name"], session_maps["pools_by_name"], session_maps["nodes_by_name"]
+    )
 
     assert output["declaration"]["class"] == "ADC"
     notes_fields = {n["field"] for n in output["x-tmos-notes"]}
@@ -55,7 +57,9 @@ def test_as3_declaration_includes_virtual_service(session_maps):
         session_maps["pools_by_name"],
         session_maps["vips_by_name"],
     )
-    output = generate_as3(context, session_maps["vips_by_name"])
+    output = generate_as3(
+        context, session_maps["vips_by_name"], session_maps["pools_by_name"], session_maps["nodes_by_name"]
+    )
     tenant = output["declaration"]["Tenant_Migration"]
     assert tenant["class"] == "Tenant"
     assert "VS-WEB-HTTP-80" in tenant

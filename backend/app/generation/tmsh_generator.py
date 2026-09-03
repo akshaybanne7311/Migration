@@ -81,10 +81,18 @@ def generate_tmsh(context: MigrationContext, vips_by_name: Dict[str, Vip]) -> st
     for pool_name, members in context.pool_effective_members.items():
         lines.append(_render_pool_members_modify(pool_name, members))
 
+    for old_name, new_name in context.pool_renames.items():
+        lines.append("tmsh mv ltm pool %s %s" % (old_name, new_name))
+
     for vip_name, effective in context.vip_effective.items():
         if not effective:
             continue
         vip = vips_by_name[vip_name]
         lines.extend(_render_vip_commands(vip, effective))
+
+    # deletes go last -- by construction (node_refs validator) a node here
+    # is no longer referenced by any pool once the edits above have run
+    for node_name in context.node_deletions:
+        lines.append("tmsh delete ltm node %s" % node_name)
 
     return "\n".join(lines) + ("\n" if lines else "")

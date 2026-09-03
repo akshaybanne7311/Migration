@@ -115,10 +115,13 @@ def parse_pool_member_rules_csv(
 ) -> List[PoolMemberEdit]:
     """Columns: source_pool, action (add|remove|remove_all|replace_all),
     source_member_node, source_member_port, target_node, target_address,
-    target_port. One rule fans out to one PoolMemberEdit per currently
-    selected VIP that actually uses source_pool -- identical edits for VIPs
-    sharing a pool are fine (see change_engine's conflict check), so this
-    never needs to know or care how many VIPs share the pool."""
+    target_port, remove_node (true|false, only meaningful with
+    action=remove -- also deletes the node object itself, blocked by
+    validation if another pool still references it). One rule fans out to
+    one PoolMemberEdit per currently selected VIP that actually uses
+    source_pool -- identical edits for VIPs sharing a pool are fine (see
+    change_engine's conflict check), so this never needs to know or care
+    how many VIPs share the pool."""
     edits: List[PoolMemberEdit] = []
     for i, row in enumerate(_read_rows(content), start=2):
         source_pool = _cell(row, "source_pool")
@@ -140,7 +143,8 @@ def parse_pool_member_rules_csv(
             port_raw = _cell(row, "source_member_port")
             if not (node and port_raw):
                 raise CsvImportError("row %d: action=remove requires source_member_node and source_member_port" % i)
-            old_refs.append(MemberRef(node_name=node, port=int(port_raw)))
+            remove_node = _cell(row, "remove_node").lower() in ("true", "1", "yes")
+            old_refs.append(MemberRef(node_name=node, port=int(port_raw), remove_node=remove_node))
         if action in ("add", "replace_all"):
             target_node = _cell(row, "target_node")
             target_address = _cell(row, "target_address")

@@ -35,6 +35,12 @@
 - **CSV bulk import** — prepare VIP renames/re-IPs, VLAN add/remove/replace rules, pool member changes, and
   node IP changes offline in a spreadsheet and import them in one shot instead of clicking through exceptions
   one VIP at a time; downloadable templates for all four formats are built into the wizard.
+- **Pool rename** — renaming a VIP's pool actually renames the underlying `ltm pool` object (`tmsh mv`) across
+  TMSH/REST/AS3, instead of leaving the VIP pointed at a name nothing else defines. Two VIPs sharing a pool
+  that disagree on its new name are blocked before generation, not left to collide silently.
+- **Node deletion with a real safety check** — a pool member removal can optionally delete the underlying node
+  object too; blocked if any other pool in the session still references that node, so a shared node can never
+  be deleted out from under a pool this plan didn't touch.
 
 ## Screenshots
 
@@ -86,7 +92,7 @@ npm run dev   # http://localhost:5173, proxies /api to :8000
 ## Tests
 
 ```bash
-cd backend && source .venv/bin/activate && pytest       # 98 tests
+cd backend && source .venv/bin/activate && pytest       # 109 tests
 cd frontend && npx tsc --noEmit
 ```
 
@@ -111,7 +117,10 @@ UCS/QKView/config archive
 ## Status
 
 **Verified, re-confirmed as of this commit:**
-- 98/98 backend tests passing
+- 109/109 backend tests passing
+- Pool rename and node-deletion safety re-verified live against the API: renaming a shared pool now validates
+  READY and emits `tmsh mv`; deleting a node still used by another pool is BLOCKED with the specific pool
+  named, deleting an unshared one generates the `tmsh delete` command and REST `DELETE` call correctly
 - CSV bulk import re-verified end-to-end in a live browser (all 4 formats hit the real API, merge into
   the wizard, validate as READY, and generate correct TMSH) — zero console/page errors observed
 - Frontend type-checks and builds clean (`tsc -b && vite build`)
