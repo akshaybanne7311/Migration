@@ -5,6 +5,7 @@ import type { CsvImportType, MemberRef, NodeChange, Pool, PoolMemberEdit, Vip, V
 import { toast } from "../../../components/toastStore";
 import { Button, Card, Checkbox } from "../../../components/ui";
 import { useWizardStore } from "../state/wizardStore";
+import { INVALID_PORT_MESSAGE, isValidPortText } from "../utils/portValidation";
 
 const CSV_TEMPLATES: Record<CsvImportType, { label: string; hint: string; header: string; example: string }> = {
   vip_changes: {
@@ -242,7 +243,7 @@ function PoolMemberExceptionEditor({ vip, pool }: { vip: Vip; pool: Pool | undef
   }
 
   function addPendingMember() {
-    if (!addAddress || !addPort) return;
+    if (!addAddress || !addPort || !isValidPortText(addPort)) return;
     setPendingAdds((prev) => [
       ...prev,
       { address: addAddress, port: Number(addPort), node_name: addNodeName || undefined },
@@ -345,6 +346,7 @@ function PoolMemberExceptionEditor({ vip, pool }: { vip: Vip; pool: Pool | undef
           onChange={(e) => setAddNodeName(e.target.value)}
         />
       </div>
+      {!isValidPortText(addPort) && <p className="text-xs text-amber-600 mb-2">{INVALID_PORT_MESSAGE}</p>}
       <div className="flex items-center gap-3">
         <button onClick={addPendingMember} className="text-xs font-medium text-blue-700 hover:underline">
           + Add to list
@@ -376,7 +378,7 @@ function ExceptionsAccordion() {
   const selectedVip = selectedVips.find((v) => v.name === vipName);
 
   function addException() {
-    if (!vipName) return;
+    if (!vipName || !isValidPortText(targetPort)) return;
     const vip = selectedVips.find((v) => v.name === vipName);
     const overrides: VipException["overrides"] = {};
     if (targetIp || targetPort) {
@@ -473,6 +475,9 @@ function ExceptionsAccordion() {
               onChange={(e) => setTargetPool(e.target.value)}
             />
           </div>
+          {!isValidPortText(targetPort) && (
+            <p className="text-xs text-amber-600 mb-2">{INVALID_PORT_MESSAGE}</p>
+          )}
           <Button variant="secondary" onClick={addException}>
             Add exception
           </Button>

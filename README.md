@@ -56,6 +56,9 @@
 - **Find/replace safety** — an empty Find with a non-empty Replace on the VIP Name or Pool Name change no
   longer corrupts the name (Python's `str.replace("", x)` would otherwise insert `x` between every character);
   it's now a safe no-op that's also caught and clearly explained by validation before you can generate.
+- **Port input validation** — every port field (VIP IP/Port, pool member add/replace, exceptions) warns inline
+  when the typed value isn't a valid port instead of silently discarding it — a non-numeric value serializes
+  to `null` in transit, which the backend can't tell apart from "left blank," so this has to be caught client-side.
 
 ## Screenshots
 

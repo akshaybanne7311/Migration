@@ -3,6 +3,7 @@ import { useValidatedSession, useVips } from "../../../api/queries";
 import type { ChangeType, PoolMemberEdit } from "../../../api/types";
 import { ChangeTypeCheckboxCard, TextField } from "../components/ChangeTypeCheckboxCard";
 import { useWizardStore } from "../state/wizardStore";
+import { INVALID_PORT_MESSAGE, isValidPortText } from "../utils/portValidation";
 
 const CARD_ORDER: { type: ChangeType; label: string }[] = [
   { type: "vip_name", label: "VIP Name" },
@@ -33,9 +34,12 @@ export function Step3ChooseChanges() {
 
   const [poolMemberAddress, setPoolMemberAddress] = useState("");
   const [poolMemberPort, setPoolMemberPort] = useState("");
+  const [vipIpPortText, setVipIpPortText] = useState(
+    String(commonChanges.vip_ip_port?.payload.new_port ?? ""),
+  );
 
   function applyPoolMemberReplaceAll() {
-    if (!poolMemberAddress || !poolMemberPort) return;
+    if (!poolMemberAddress || !poolMemberPort || !isValidPortText(poolMemberPort)) return;
     const edits: PoolMemberEdit[] = Array.from(selectedVipNames).map((vipName) => ({
       vip_name: vipName,
       action: "replace_all",
@@ -116,17 +120,23 @@ export function Step3ChooseChanges() {
             )}
 
             {type === "vip_ip_port" && (
-              <TextField
-                label="New port (leave blank to keep current)"
-                value={String(commonChanges.vip_ip_port?.payload.new_port ?? "")}
-                onChange={(v) =>
-                  setCommonChange("vip_ip_port", {
-                    ...commonChanges.vip_ip_port?.payload,
-                    new_port: v ? Number(v) : undefined,
-                  })
-                }
-                placeholder="e.g. 5070"
-              />
+              <>
+                <TextField
+                  label="New port (leave blank to keep current)"
+                  value={vipIpPortText}
+                  onChange={(v) => {
+                    setVipIpPortText(v);
+                    setCommonChange("vip_ip_port", {
+                      ...commonChanges.vip_ip_port?.payload,
+                      new_port: isValidPortText(v) && v.trim() ? Number(v) : undefined,
+                    });
+                  }}
+                  placeholder="e.g. 5070"
+                />
+                {!isValidPortText(vipIpPortText) && (
+                  <p className="text-xs text-amber-600">{INVALID_PORT_MESSAGE}</p>
+                )}
+              </>
             )}
 
             {type === "pool_name" && (
@@ -176,6 +186,9 @@ export function Step3ChooseChanges() {
                   onChange={setPoolMemberPort}
                   placeholder="80"
                 />
+                {!isValidPortText(poolMemberPort) && (
+                  <p className="text-xs text-amber-600">{INVALID_PORT_MESSAGE}</p>
+                )}
                 <button
                   onClick={applyPoolMemberReplaceAll}
                   className="text-xs font-medium text-blue-700 hover:underline"
