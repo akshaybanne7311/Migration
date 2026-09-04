@@ -6,12 +6,21 @@
   <img alt="React" src="https://img.shields.io/badge/frontend-React%2019-61DAFB?logo=react&logoColor=black" />
   <img alt="TypeScript" src="https://img.shields.io/badge/lang-TypeScript-3178C6?logo=typescript&logoColor=white" />
   <img alt="Docker" src="https://img.shields.io/badge/deploy-Docker%20Compose-2496ED?logo=docker&logoColor=white" />
-  <img alt="Tests" src="https://img.shields.io/badge/backend%20tests-78%20passing-2ea44f" />
+  <img alt="Tests" src="https://img.shields.io/badge/backend%20tests-118%20passing-2ea44f" />
 </p>
 
 <p align="center">
   Network device configuration intelligence and bulk VIP migration — ingest a UCS/QKView/<code>bigip.conf</code>-style
   archive, plan changes across hundreds of VIPs with a dependency-aware wizard, and generate real TMSH/REST/AS3 output.
+</p>
+
+<p align="center">
+  <img src="docs/demo/smart-migration-walkthrough.gif" alt="Smart Migration wizard walkthrough: upload a UCS file, select VIPs, review current config, choose a VLAN change, validate, and generate TMSH/REST/AS3 output" width="760" />
+</p>
+
+<p align="center">
+  <em>Upload → select VIPs → review current config → choose a change → validate → generate. No narration needed —
+  every step above is the real app, running against the parsed synthetic fixture, no staged data.</em>
 </p>
 
 ---
