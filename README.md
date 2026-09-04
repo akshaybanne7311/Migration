@@ -53,6 +53,9 @@
   plan the generators read from (never a separate estimate that can drift from the actual output).
 - **Monitor-reference validation** — pointing a VIP's monitor at a name that doesn't exist in the parsed
   session is caught and blocked before generation, not discovered when the script fails on the device.
+- **Find/replace safety** — an empty Find with a non-empty Replace on the VIP Name or Pool Name change no
+  longer corrupts the name (Python's `str.replace("", x)` would otherwise insert `x` between every character);
+  it's now a safe no-op that's also caught and clearly explained by validation before you can generate.
 
 ## Screenshots
 
@@ -104,7 +107,7 @@ npm run dev   # http://localhost:5173, proxies /api to :8000
 ## Tests
 
 ```bash
-cd backend && source .venv/bin/activate && pytest       # 112 tests
+cd backend && source .venv/bin/activate && pytest       # 118 tests
 cd frontend && npx tsc --noEmit
 ```
 
@@ -129,7 +132,11 @@ UCS/QKView/config archive
 ## Status
 
 **Verified, re-confirmed as of this commit:**
-- 112/112 backend tests passing
+- 118/118 backend tests passing
+- Fixed a real data-corruption bug found by self-audit: an empty Find with a non-empty Replace on VIP
+  Name/Pool Name silently mangled the name (confirmed live before the fix — `str.replace("", x)` inserts
+  x between every character); confirmed live after the fix that it's a safe no-op caught by a specific,
+  named validation error instead
 - Pool rename and node-deletion safety re-verified live against the API: renaming a shared pool now validates
   READY and emits `tmsh mv`; deleting a node still used by another pool is BLOCKED with the specific pool
   named, deleting an unshared one generates the `tmsh delete` command and REST `DELETE` call correctly

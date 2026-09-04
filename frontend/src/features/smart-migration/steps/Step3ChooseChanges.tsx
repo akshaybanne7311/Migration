@@ -86,7 +86,15 @@ export function Step3ChooseChanges() {
                 {(() => {
                   const find = (commonChanges.vip_name?.payload.find as string) ?? "";
                   const replace = (commonChanges.vip_name?.payload.replace as string) ?? "";
-                  if (!find) return null;
+                  if (!find) {
+                    if (!replace) return null;
+                    return (
+                      <p className="text-xs text-amber-600">
+                        Replace is set but Find is empty — nothing will be renamed. Fill in Find to
+                        match the text you want to change.
+                      </p>
+                    );
+                  }
                   const matches = selectedVips.filter((v) => v.name.includes(find));
                   return (
                     <p className="text-xs text-slate-400">
@@ -140,6 +148,13 @@ export function Step3ChooseChanges() {
                     })
                   }
                 />
+                {!(commonChanges.pool_name?.payload.find as string) &&
+                  (commonChanges.pool_name?.payload.replace as string) && (
+                    <p className="text-xs text-amber-600">
+                      Replace is set but Find is empty — nothing will be renamed. Fill in Find to
+                      match the text you want to change.
+                    </p>
+                  )}
               </>
             )}
 

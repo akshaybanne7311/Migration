@@ -32,7 +32,12 @@ class ChangeEngineError(Exception):
 def _apply_string_pattern(original: str, payload: Dict) -> str:
     find = payload.get("find")
     replace = payload.get("replace")
-    if find is not None and replace is not None:
+    # An empty find is deliberately treated as "no pattern", not "match
+    # everywhere" -- str.replace("", x) inserts x between every character
+    # of original, silently mangling the name. A user clearing the Find
+    # field while Replace still has text (a completely ordinary slip) must
+    # not corrupt every selected VIP's name/pool.
+    if find and replace is not None:
         return original.replace(find, replace)
     return original
 

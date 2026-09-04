@@ -6,6 +6,7 @@ from app.validation.checks import (
     ipv6_syntax,
     monitor_refs,
     node_refs,
+    pattern_safety,
     pool_members,
     tmsh_syntax,
     vlan_refs,
@@ -24,6 +25,7 @@ def run_validation(vi: ValidationInput) -> ValidationResult:
         pool_members.check(vi),
         node_refs.check(vi),
         monitor_refs.check(vi),
+        pattern_safety.check(vi),
         tmsh_syntax.check(vi),
     ]
     overall = "BLOCKED" if any(c.severity == Severity.BLOCKED for c in checks) else "READY"

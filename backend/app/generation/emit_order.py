@@ -29,7 +29,10 @@ class MigrationContext:
 def _apply_string_pattern(original: str, payload: Dict[str, Any]) -> str:
     find = payload.get("find")
     replace = payload.get("replace")
-    if find is not None and replace is not None:
+    # See the identical guard in migration/change_engine.py -- an empty
+    # find must never fall through to str.replace("", x), which corrupts
+    # original by inserting x between every character.
+    if find and replace is not None:
         return original.replace(find, replace)
     return original
 
