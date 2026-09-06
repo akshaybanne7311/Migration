@@ -35,15 +35,6 @@ export function TmshGeneratorPage() {
   );
 }
 
-export function ExportPage() {
-  return (
-    <StandalonePlaceholder
-      title="Export"
-      note="Copy or download generated TMSH/REST/AS3 from Step 5 of the Smart Migration wizard."
-    />
-  );
-}
-
 export function SearchPage() {
   return (
     <StandalonePlaceholder

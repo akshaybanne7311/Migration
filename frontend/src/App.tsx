@@ -12,11 +12,11 @@ import { GuiPreviewPage } from "./pages/GuiPreviewPage";
 import { HealthCheckPage } from "./pages/HealthCheckPage";
 import { ChangeHistoryPage } from "./pages/ChangeHistoryPage";
 import { SmartMigrationPage } from "./pages/SmartMigrationPage";
+import { ExportPage } from "./pages/ExportPage";
 import {
   ChangeSetPage,
   ComparePage,
   DependenciesPage,
-  ExportPage,
   SearchPage,
   TmshGeneratorPage,
 } from "./pages/PlaceholderPages";
