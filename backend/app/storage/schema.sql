@@ -120,7 +120,8 @@ CREATE TABLE command_history (
     user TEXT NOT NULL,
     timestamp TEXT NOT NULL,
     command TEXT NOT NULL,
-    is_mutating INTEGER NOT NULL DEFAULT 0
+    is_mutating INTEGER NOT NULL DEFAULT 0,
+    contains_secret INTEGER NOT NULL DEFAULT 0
 );
 CREATE INDEX idx_command_history_mutating ON command_history(is_mutating);
 CREATE INDEX idx_command_history_user ON command_history(user);

@@ -191,6 +191,7 @@ def write_command_history(conn: sqlite3.Connection, entries) -> None:
     with conn:
         for e in entries:
             conn.execute(
-                "INSERT INTO command_history (user, timestamp, command, is_mutating) VALUES (?, ?, ?, ?)",
-                (e.user, e.timestamp, e.command, 1 if e.is_mutating else 0),
+                "INSERT INTO command_history (user, timestamp, command, is_mutating, contains_secret) "
+                "VALUES (?, ?, ?, ?, ?)",
+                (e.user, e.timestamp, e.command, 1 if e.is_mutating else 0, 1 if e.contains_secret else 0),
             )

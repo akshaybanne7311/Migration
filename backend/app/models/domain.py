@@ -100,6 +100,7 @@ class CommandHistoryEntry(BaseModel):
     timestamp: str
     command: str
     is_mutating: bool
+    contains_secret: bool = False
 
 
 class ParsedConfig(BaseModel):

@@ -206,6 +206,10 @@ export interface CommandHistoryEntry {
   timestamp: string;
   command: string;
   is_mutating: boolean;
+  /** True if this command originally referenced a password/secret/shared
+   * key -- the actual value is redacted server-side before storage, this
+   * only flags that a credential was touched. */
+  contains_secret: boolean;
 }
 
 export interface CommandHistoryListOut {

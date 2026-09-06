@@ -57,6 +57,26 @@ def _is_mutating(command: str) -> bool:
     return first_word in _MUTATING_VERBS
 
 
+# Real tmsh history has been observed containing the literal secret value on
+# the command line (e.g. an admin ran `modify auth password <newpass>`
+# instead of the interactive prompt) -- shell history captures exactly what
+# was typed, keystrokes included. Everything after one of these keywords is
+# redacted *before* the entry is ever built, so the plaintext is never
+# stored in the session DB or returned by the API, only the fact that a
+# credential was changed, by whom, and when.
+_SECRET_KEYWORD_RE = re.compile(
+    r"\b(password|passphrase|secret|shared-secret|pre-?shared-key|community|private-key)\b",
+    re.IGNORECASE,
+)
+
+
+def _redact_secret(command: str) -> str:
+    match = _SECRET_KEYWORD_RE.search(command)
+    if not match:
+        return command
+    return command[: match.end()] + " [REDACTED]"
+
+
 def parse_command_history(raw_text: str, user: str) -> List[CommandHistoryEntry]:
     entries: List[CommandHistoryEntry] = []
     for line in raw_text.splitlines():
@@ -66,12 +86,14 @@ def parse_command_history(raw_text: str, user: str) -> List[CommandHistoryEntry]
         cmd = match.group("cmd").strip()
         if cmd in _NOISE_COMMANDS:
             continue
+        contains_secret = bool(_SECRET_KEYWORD_RE.search(cmd))
         entries.append(
             CommandHistoryEntry(
                 user=user,
                 timestamp=match.group("ts"),
-                command=cmd,
+                command=_redact_secret(cmd) if contains_secret else cmd,
                 is_mutating=_is_mutating(cmd),
+                contains_secret=contains_secret,
             )
         )
     return entries

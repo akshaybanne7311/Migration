@@ -150,7 +150,7 @@ class CommandHistoryRepository:
         mutating_only: bool = False,
         user: Optional[str] = None,
     ) -> List[CommandHistoryEntry]:
-        query = "SELECT user, timestamp, command, is_mutating FROM command_history WHERE 1=1"
+        query = "SELECT user, timestamp, command, is_mutating, contains_secret FROM command_history WHERE 1=1"
         params: List[object] = []
         if mutating_only:
             query += " AND is_mutating = 1"
@@ -161,7 +161,11 @@ class CommandHistoryRepository:
         rows = conn.execute(query, params).fetchall()
         return [
             CommandHistoryEntry(
-                user=r["user"], timestamp=r["timestamp"], command=r["command"], is_mutating=bool(r["is_mutating"])
+                user=r["user"],
+                timestamp=r["timestamp"],
+                command=r["command"],
+                is_mutating=bool(r["is_mutating"]),
+                contains_secret=bool(r["contains_secret"]),
             )
             for r in rows
         ]

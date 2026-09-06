@@ -34,6 +34,13 @@ export function ChangeHistoryPage() {
         subtitle={`Real, timestamped tmsh commands from ${session?.name ?? "this session"}'s .tmsh-history files inside the archive — shell history, not device config. This is exactly what a TAC engineer would pull first to answer "what changed, and when."`}
       />
 
+      <div className="mb-4 px-3 py-2 rounded-md text-xs bg-amber-50 border border-amber-200 text-amber-800 max-w-2xl">
+        Commands that referenced a password, passphrase, or shared key are marked{" "}
+        <span className="font-semibold">SECRET</span> below — the value itself is redacted before it's ever
+        stored, so you can see that a credential was changed, by whom, and when, without the credential
+        being readable here.
+      </div>
+
       <div className="mb-4 flex items-center gap-4 flex-wrap">
         <label className="flex items-center gap-2 text-sm text-slate-600 cursor-pointer">
           <input type="checkbox" checked={mutatingOnly} onChange={(e) => setMutatingOnly(e.target.checked)} />
@@ -88,6 +95,11 @@ export function ChangeHistoryPage() {
                     {e.is_mutating && (
                       <span className="ml-2 text-[10px] px-1.5 py-0.5 rounded border bg-amber-50 text-amber-700 border-amber-200 uppercase tracking-wide">
                         change
+                      </span>
+                    )}
+                    {e.contains_secret && (
+                      <span className="ml-2 text-[10px] px-1.5 py-0.5 rounded border bg-red-50 text-red-700 border-red-200 uppercase tracking-wide">
+                        secret
                       </span>
                     )}
                   </td>
