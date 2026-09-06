@@ -77,6 +77,14 @@ export function useConfigRevisions(sessionId: string | null, opts?: { configFile
   });
 }
 
+export function useVipDependencyGraph(sessionId: string | null, vip: string | null) {
+  return useQuery({
+    queryKey: ["session", sessionId, "dependency-graph", vip],
+    queryFn: () => api.getVipDependencyGraph(sessionId as string, vip as string),
+    enabled: !!sessionId && !!vip,
+  });
+}
+
 export function useBackendHealth() {
   return useQuery({
     queryKey: ["health"],

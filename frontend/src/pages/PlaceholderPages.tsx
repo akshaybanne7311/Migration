@@ -44,15 +44,6 @@ export function SearchPage() {
   );
 }
 
-export function DependenciesPage() {
-  return (
-    <StandalonePlaceholder
-      title="Dependencies"
-      note="A visual dependency graph browser isn't built yet. Node sharing across pools/VIPs is visible on the Nodes page (shared nodes are flagged)."
-    />
-  );
-}
-
 export function ComparePage() {
   return (
     <StandalonePlaceholder

@@ -4,6 +4,7 @@ from app.api import (
     certificates,
     command_history,
     config_revisions,
+    dependency_graph,
     health_check,
     migration,
     monitors,
@@ -26,5 +27,6 @@ api_router.include_router(system_objects.router)
 api_router.include_router(command_history.router)
 api_router.include_router(config_revisions.router)
 api_router.include_router(certificates.router)
+api_router.include_router(dependency_graph.router)
 api_router.include_router(health_check.router)
 api_router.include_router(migration.router)

@@ -232,6 +232,21 @@ export interface ConfigRevision {
   contains_secret: boolean;
 }
 
+export interface GraphNode {
+  type: string;
+  name: string;
+  attrs: Record<string, unknown>;
+}
+
+export interface VipDependencyGraph {
+  vip: GraphNode;
+  pools: GraphNode[];
+  nodes: GraphNode[];
+  vlans: GraphNode[];
+  monitors: GraphNode[];
+  profiles: GraphNode[];
+}
+
 export interface ConfigRevisionListOut {
   items: ConfigRevision[];
   total: number;

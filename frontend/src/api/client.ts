@@ -16,6 +16,7 @@ import type {
   Vip,
   ValidationResult,
   Vlan,
+  VipDependencyGraph,
 } from "./types";
 import { toast } from "../components/toastStore";
 
@@ -125,6 +126,8 @@ export const api = {
         params: { config_file: opts?.configFile ?? undefined },
       })
       .then((r) => r.data),
+  getVipDependencyGraph: (sessionId: string, vip: string) =>
+    http.get<VipDependencyGraph>(`/sessions/${sessionId}/dependency-graph`, { params: { vip } }).then((r) => r.data),
 
   // migration plans
   createPlan: (sessionId: string, plan: MigrationPlan) =>

@@ -13,10 +13,10 @@ import { HealthCheckPage } from "./pages/HealthCheckPage";
 import { ChangeHistoryPage } from "./pages/ChangeHistoryPage";
 import { SmartMigrationPage } from "./pages/SmartMigrationPage";
 import { ExportPage } from "./pages/ExportPage";
+import { DependenciesPage } from "./pages/DependenciesPage";
 import {
   ChangeSetPage,
   ComparePage,
-  DependenciesPage,
   SearchPage,
   TmshGeneratorPage,
 } from "./pages/PlaceholderPages";
