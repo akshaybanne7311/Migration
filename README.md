@@ -6,7 +6,7 @@
   <img alt="React" src="https://img.shields.io/badge/frontend-React%2019-61DAFB?logo=react&logoColor=black" />
   <img alt="TypeScript" src="https://img.shields.io/badge/lang-TypeScript-3178C6?logo=typescript&logoColor=white" />
   <img alt="Docker" src="https://img.shields.io/badge/deploy-Docker%20Compose-2496ED?logo=docker&logoColor=white" />
-  <img alt="Tests" src="https://img.shields.io/badge/backend%20tests-118%20passing-2ea44f" />
+  <img alt="Tests" src="https://img.shields.io/badge/backend%20tests-121%20passing-2ea44f" />
 </p>
 
 <p align="center">
@@ -20,7 +20,7 @@
 
 <p align="center">
   <em>Upload → select VIPs → review current config → choose a change → validate → generate. No narration needed —
-  every step above is the real app, running against the parsed synthetic fixture, no staged data.</em>
+  every step above is the real app, running against a real production UCS export, no staged data.</em>
 </p>
 
 ---
@@ -144,7 +144,19 @@ UCS/QKView/config archive
 ## Status
 
 **Verified, re-confirmed as of this commit:**
-- 118/118 backend tests passing
+- 121/121 backend tests passing
+- **Validated against real production UCS/QKView exports** — 8 real F5 devices (16 files: both UCS and QKView
+  per device) from a live production environment, not just the synthetic fixture. This caught and fixed two
+  real bugs the synthetic fixture never exercised: the parser choking on anonymous nested blocks (`apm
+  policy-item ... rules { { ... } { ... } }`) and on unpartitioned stanza names (`net trunk NAME`, `sys
+  provision ltm`); and `bigip_base.conf` never being read at all, so every real device parsed **0 VLANs** and
+  no self IPs/trunks/routes/route-domains/HA config regardless of what was actually configured
+- Self IPs, trunks, static routes, route domains, DNS resolvers, device identity/HA (`cm device`,
+  `cm device-group`, `cm traffic-group`), management routes, and resource provisioning are now modeled as
+  real parsed objects (`system_objects`), surfaced in GUI Preview's Network/System/Device Management sections
+  and on the System Config page — confirmed against real device data, not fabricated
+- Added a Config Health Check tool (11 heuristic checks — dangling VLAN refs, duplicate VIP destinations,
+  pools without a monitor, missing NTP/DNS, thin HA groups, etc.) verified against real session data
 - Fixed a real data-corruption bug found by self-audit: an empty Find with a non-empty Replace on VIP
   Name/Pool Name silently mangled the name (confirmed live before the fix — `str.replace("", x)` inserts
   x between every character); confirmed live after the fix that it's a safe no-op caught by a specific,
@@ -154,18 +166,16 @@ UCS/QKView/config archive
   named, deleting an unshared one generates the `tmsh delete` command and REST `DELETE` call correctly
 - CSV bulk import re-verified end-to-end in a live browser (all 4 formats hit the real API, merge into
   the wizard, validate as READY, and generate correct TMSH) — zero console/page errors observed
-- Step 2's inline review, Step 3's VIP-name affected-count preview, Step 4's point-and-click pool member
-  editor, and Step 5's real migration summary all re-verified live in a browser against the synthetic
-  fixture (including actually applying a member removal through to a correct generated TMSH line) — zero
-  console/page errors observed
+- Multi-file/folder upload, bulk session delete, and the full Smart Migration wizard (Steps 1–5, both
+  "apply changes" and "full recreate" output modes) re-verified live in a real browser against real device
+  sessions — zero console/page errors observed
 - Frontend type-checks and builds clean (`tsc -b && vite build`)
 
 **Known gaps — not yet built:**
-- Not validated against a real production configuration export — everything above runs against a synthetic fixture
-- SNAT pools (translation address pools), self-IPs, and route-domain objects aren't modeled as first-class
-  objects yet (route domain *suffix* parsing on a VIP destination — the `%N` in `2001:db8::1%10` — is handled;
-  a dedicated route-domain object is not)
+- SNAT pools (translation address pools) aren't modeled as a first-class object yet (route domain *suffix*
+  parsing on a VIP destination — the `%N` in `2001:db8::1%10` — is handled; self IPs and route domains
+  themselves are now modeled, see above)
 - Docker deployment files are written but not build-tested end-to-end in this environment
-
-Treat this as a well-tested planning/generation tool against the data it's actually been run against — not yet
-a claim of production-readiness for your specific environment until the item above is closed.
+- Real UCS/QKView validation so far covers one customer's device fleet (8 devices, consistent TMOS version
+  and config style) — different TMOS versions or heavily customized configs may still surface parser edge
+  cases the way the first real-file pass did
