@@ -119,12 +119,44 @@ export async function exportSopDocument(params: {
           checklistItem("Run a smoke test against each migrated VIP's destination address/port."),
           checklistItem("Save the running configuration: `tmsh save sys config`."),
 
+          h("4.1 Alternative Execution Methods", HeadingLevel.HEADING_2),
+          p(
+            `This plan was also generated as iControl REST calls (${generated?.rest.length ?? 0}), an AS3 declaration, ` +
+              "and an Ansible playbook -- for teams that execute migrations through a REST client, an AS3 orchestration " +
+              "pipeline, or an Ansible controller instead of a tmsh session. All four formats produce the same result; " +
+              "pick one, not several. See the Generate step's REST/AS3/ANSIBLE tabs, the Excel plan export, or the " +
+              "accompanying LLD document (Section 7) for the full REST/AS3/Ansible content.",
+          ),
+
           h("5. Rollback Plan", HeadingLevel.HEADING_1),
           p(
-            "This tool does not currently auto-generate a rollback script. If an issue is found post-migration, " +
-              "restore the pre-migration UCS backup taken in Section 2, or manually revert the specific objects " +
-              "listed in Section 4 to their prior values (visible in the source session's VIP/Pool/Node pages).",
+            "Primary rollback: restore the pre-migration UCS backup taken in Section 2 -- this is the only rollback " +
+              "path that's guaranteed complete, since it reverts every object, not just the ones this plan touched. " +
+              "For a targeted revert of a specific virtual server without a full restore, the pre-change values for " +
+              "every VIP in scope are listed below for reference -- this table is not an executable script; verify " +
+              "each value against the live target before applying it manually.",
           ),
+          new Table({
+            width: { size: 100, type: WidthType.PERCENTAGE },
+            rows: [
+              new TableRow({
+                children: [headerCell("VIP"), headerCell("Destination"), headerCell("Pool"), headerCell("Persistence"), headerCell("VLANs"), headerCell("Monitors")],
+              }),
+              ...selectedVips.map(
+                (v) =>
+                  new TableRow({
+                    children: [
+                      cell(v.name),
+                      cell(`${v.destination_address}:${v.destination_port}`),
+                      cell(v.pool_name ?? "none"),
+                      cell(v.persistence ?? "none"),
+                      cell(v.vlans.join(", ") || "none"),
+                      cell(v.monitor_names.join(", ") || "none"),
+                    ],
+                  }),
+              ),
+            ],
+          }),
 
           h("6. Sign-off", HeadingLevel.HEADING_1),
           new Table({

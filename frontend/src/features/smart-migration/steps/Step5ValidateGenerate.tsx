@@ -6,6 +6,7 @@ import { Button, Card, KpiCard, SeverityBadge } from "../../../components/ui";
 import { toast } from "../../../components/toastStore";
 import { exportMigrationPlanToExcel } from "../../../utils/excelExport";
 import { exportSopDocument } from "../../../utils/sopExport";
+import { exportLldDocument } from "../../../utils/designDocsExport";
 import { useWizardStore } from "../state/wizardStore";
 
 function buildPlan(sessionId: string, store: ReturnType<typeof useWizardStore.getState>): MigrationPlan {
@@ -162,7 +163,7 @@ export function Step5ValidateGenerate() {
   const [error, setError] = useState<string | null>(null);
   const [validation, setValidation] = useState<ValidationResult | null>(null);
   const [generated, setGenerated] = useState<GenerateResult | null>(null);
-  const [exporting, setExporting] = useState<"excel" | "sop" | null>(null);
+  const [exporting, setExporting] = useState<"excel" | "sop" | "lld" | null>(null);
 
   const selectedVips = (vipsData?.items ?? []).filter((v) => selectedVipNames.has(v.name));
 
@@ -199,6 +200,28 @@ export function Step5ValidateGenerate() {
       toast("success", "SOP document downloaded.");
     } catch (e) {
       toast("error", e instanceof Error ? e.message : "SOP export failed");
+    } finally {
+      setExporting(null);
+    }
+  }
+
+  async function handleExportLld() {
+    if (!sessionId) return;
+    setExporting("lld");
+    try {
+      const plan = buildPlan(sessionId, useWizardStore.getState());
+      const vipsByName = new Map((vipsData?.items ?? []).map((v) => [v.name, v] as const));
+      await exportLldDocument({
+        sessionName: session?.name ?? "migration",
+        plan,
+        vipsByName,
+        kpis,
+        validation,
+        generated,
+      });
+      toast("success", "LLD document downloaded.");
+    } catch (e) {
+      toast("error", e instanceof Error ? e.message : "LLD export failed");
     } finally {
       setExporting(null);
     }
@@ -356,6 +379,13 @@ export function Step5ValidateGenerate() {
           disabled={exporting !== null || selectedVips.length === 0}
         >
           {exporting === "sop" ? "Exporting…" : "Download SOP (.docx)"}
+        </Button>
+        <Button
+          variant="secondary"
+          onClick={handleExportLld}
+          disabled={exporting !== null || selectedVips.length === 0}
+        >
+          {exporting === "lld" ? "Exporting…" : "Download LLD (.docx)"}
         </Button>
         {error && <span className="text-sm text-red-600 self-center">{error}</span>}
       </div>
