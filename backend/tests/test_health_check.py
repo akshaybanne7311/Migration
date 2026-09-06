@@ -18,6 +18,7 @@ def test_health_check_runs_and_returns_all_checks(client, ready_session_id: str)
         "ha_group_membership",
         "certificates_expired",
         "certificates_expiring_soon",
+        "license_evaluation",
     }
     for c in body["checks"]:
         assert c["severity"] in ("pass", "warn", "blocked")

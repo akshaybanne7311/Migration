@@ -134,6 +134,41 @@ def extract_certificate_files(archive_path: Path) -> Dict[str, bytes]:
     return result
 
 
+_LICENSE_MEMBER_NAMES = (
+    "config/bigip.license",
+    "config/RegKey.license",
+    "config/ucs_version",
+    "config/.ucs_platform",
+)
+_LICENSE_HISTORY_RE = re.compile(r"^config/bigip\.license\.(\d{8})$")
+
+
+def extract_license_and_platform_files(archive_path: Path) -> Dict[str, str]:
+    """The device's real license (module entitlements, Production vs
+    Evaluation, licensed/service-check dates), software version/build, and
+    hardware platform ID -- three small plain-text files real UCS/QKView
+    archives carry that aren't TMOS config stanzas at all, so bigip.conf
+    parsing never sees them. Also picks up any `config/bigip.license.<date>`
+    backups TMOS keeps from earlier re-licensing events -- confirmed on a
+    real archive going back to 2019 -- for a lightweight license history.
+    Best-effort, like the other bonus extractors: {} for a raw .conf upload
+    or an archive that simply doesn't have these files.
+    """
+    path = Path(archive_path)
+    if path.suffix.lower() == ".conf" or not tarfile.is_tarfile(path):
+        return {}
+    result: Dict[str, str] = {}
+    with tarfile.open(path, "r:*") as tar:
+        names = {m.name: m for m in tar.getmembers() if m.isfile()}
+        wanted = [n for n in names if n in _LICENSE_MEMBER_NAMES or _LICENSE_HISTORY_RE.match(n)]
+        for name in wanted:
+            extracted = tar.extractfile(names[name])
+            if extracted is None:
+                continue
+            result[name] = extracted.read().decode("utf-8", errors="replace")
+    return result
+
+
 def extract_archive_member(archive_path: Path, member_name: str) -> Optional[bytes]:
     """Re-extracts one exact file (by its archive-internal path, e.g. one of
     the `source_paths` recorded on a parsed certificate) so the original

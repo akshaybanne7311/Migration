@@ -6,9 +6,16 @@ from fastapi import APIRouter, File, HTTPException, UploadFile
 from pydantic import BaseModel
 
 from app.config import settings
-from app.ingest.archive import ArchiveError, extract_certificate_files, extract_command_history, extract_config_text
+from app.ingest.archive import (
+    ArchiveError,
+    extract_certificate_files,
+    extract_command_history,
+    extract_config_text,
+    extract_license_and_platform_files,
+)
 from app.ingest.certificates import certificate_to_system_object, parse_certificates
 from app.ingest.command_history import parse_command_history
+from app.ingest.license_info import license_bundle_to_system_objects
 from app.ingest.ingest_pipeline import parse_bigip_conf
 from app.storage import registry_db, session_db
 
@@ -102,6 +109,12 @@ async def upload_session(file: UploadFile = File(...)) -> SessionOut:
             cert_files = extract_certificate_files(archive_path)
             for cert in parse_certificates(cert_files):
                 config.system_objects.append(certificate_to_system_object(cert))
+        except Exception:  # noqa: BLE001 - bonus data, never blocks the upload
+            pass
+
+        try:
+            license_files = extract_license_and_platform_files(archive_path)
+            config.system_objects.extend(license_bundle_to_system_objects(license_files))
         except Exception:  # noqa: BLE001 - bonus data, never blocks the upload
             pass
 

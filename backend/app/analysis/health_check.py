@@ -281,4 +281,27 @@ def run_health_check(conn: sqlite3.Connection) -> List[ValidationCheck]:
         )
     )
 
+    # -- license usage type (real config/bigip.license, not sys provision --
+    # provision says what's turned on, only the license says what's actually
+    # entitled and whether it's time-limited)
+    license_obj = next((o for o in system_objects if o.object_type == "sys license" and o.name == "current"), None)
+    usage = _entries(license_obj.entries_json).get("usage") if license_obj else None
+    is_eval = isinstance(usage, str) and usage.strip().lower() == "evaluation"
+    checks.append(
+        ValidationCheck(
+            id="license_evaluation",
+            label="License type",
+            severity=Severity.BLOCKED if is_eval else Severity.PASS,
+            details=(
+                "this device is running on an Evaluation license -- it will expire and stop passing traffic; "
+                "not suitable as a permanent migration target without a Production license"
+                if is_eval
+                else (
+                    "licensed for Production use" if usage else "no license file was parsed from this session"
+                )
+            ),
+            affected=[],
+        )
+    )
+
     return checks

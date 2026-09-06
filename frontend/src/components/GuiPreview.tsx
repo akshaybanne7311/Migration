@@ -26,6 +26,7 @@ type Section =
   | "sys-mgmt-routes"
   | "sys-provisioning"
   | "sys-certificates"
+  | "sys-license"
   | "dm-devices"
   | "dm-device-groups"
   | "dm-traffic-groups"
@@ -52,6 +53,7 @@ const SECTION_LABEL: Record<Section, string> = {
   "sys-mgmt-routes": "System » Configuration » Device » Management Routes",
   "sys-provisioning": "System » Resource Provisioning",
   "sys-certificates": "System » Certificate Management » SSL Certificate List",
+  "sys-license": "System » License & Version",
   "dm-devices": "Device Management » Devices",
   "dm-device-groups": "Device Management » Device Groups",
   "dm-traffic-groups": "Device Management » Traffic Groups",
@@ -76,6 +78,7 @@ const SYSTEM_SUB_SECTIONS: [Section, string][] = [
   ["sys-mgmt-routes", "Management Routes"],
   ["sys-provisioning", "Resource Provisioning"],
   ["sys-certificates", "SSL Certificates"],
+  ["sys-license", "License & Version"],
 ];
 
 const DEVICE_MGMT_SUB_SECTIONS: [Section, string][] = [
@@ -641,7 +644,17 @@ function CertificateListView({ objects, sessionId }: { objects: SystemObject[]; 
 /** Single-instance system settings (hostname, NTP, SNMP, syslog, ...) shown
  * as a key/value properties table -- there's exactly one of these per
  * device, unlike self IPs/trunks/routes which are lists. */
-function SystemInfoView({ objects, types, emptyText }: { objects: SystemObject[]; types: string[]; emptyText: string }) {
+function SystemInfoView({
+  objects,
+  types,
+  emptyText,
+  sourceLabel = "Raw parsed config (from bigip.conf)",
+}: {
+  objects: SystemObject[];
+  types: string[];
+  emptyText: string;
+  sourceLabel?: string;
+}) {
   const matches = objects.filter((o) => types.includes(o.object_type));
   if (matches.length === 0) return <EmptySectionNote text={emptyText} />;
   return (
@@ -665,7 +678,7 @@ function SystemInfoView({ objects, types, emptyText }: { objects: SystemObject[]
               ))}
               <tr>
                 <td colSpan={2} className="px-3 py-2" style={{ background: UI.white }}>
-                  <RawStanzaBlock label="Raw parsed config (from bigip.conf)" json={obj.entries_json} />
+                  <RawStanzaBlock label={sourceLabel} json={obj.entries_json} />
                 </td>
               </tr>
             </tbody>
@@ -1233,6 +1246,44 @@ export function GuiPreview({
                 />
               )}
               {section === "sys-certificates" && <CertificateListView objects={systemObjects} sessionId={sessionId} />}
+              {section === "sys-license" && (
+                <>
+                  <SystemInfoView
+                    objects={systemObjects}
+                    types={["sys software-version"]}
+                    emptyText="No software version info was parsed (config/ucs_version wasn't found in this archive)."
+                    sourceLabel="Raw parsed metadata (from config/ucs_version)"
+                  />
+                  <SystemInfoView
+                    objects={systemObjects}
+                    types={["sys platform"]}
+                    emptyText="No hardware/VE platform info was parsed (config/.ucs_platform wasn't found in this archive)."
+                    sourceLabel="Raw parsed metadata (from config/.ucs_platform)"
+                  />
+                  <SystemInfoView
+                    objects={systemObjects.filter((o) => o.object_type === "sys license" && o.name === "current")}
+                    types={["sys license"]}
+                    emptyText="No license file was parsed (config/bigip.license wasn't found in this archive)."
+                    sourceLabel="Raw parsed metadata (from config/bigip.license) -- not a TMOS config stanza"
+                  />
+                  {systemObjects.some((o) => o.object_type === "sys license-history") && (
+                    <div className="mb-2">
+                      <div className="text-[12px] mb-2" style={{ color: UI.textMuted }}>
+                        Historical license backups found in this archive (config/bigip.license.&lt;date&gt;) -- real
+                        re-licensing events over this device's lifetime, oldest first:
+                      </div>
+                      <SystemInfoView
+                        objects={[...systemObjects]
+                          .filter((o) => o.object_type === "sys license-history")
+                          .sort((a, b) => a.name.localeCompare(b.name))}
+                        types={["sys license-history"]}
+                        emptyText=""
+                        sourceLabel="Raw parsed metadata (historical config/bigip.license.<date> backup)"
+                      />
+                    </div>
+                  )}
+                </>
+              )}
               {section === "dm-devices" && (
                 <SystemInfoView objects={systemObjects} types={["cm device"]} emptyText="No device identity info parsed from this session." />
               )}

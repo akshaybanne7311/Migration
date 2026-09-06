@@ -141,6 +141,54 @@ export function SystemConfigPage() {
       />
 
       <ObjectTable
+        title="Software Version (config/ucs_version)"
+        rows={objectsOfType(objects, "sys software-version")}
+        columns={[
+          { label: "Product", get: (e) => entryToText(e.product) },
+          { label: "Version", get: (e) => entryToText(e.version) },
+          { label: "Build", get: (e) => entryToText(e.build) },
+          { label: "Edition", get: (e) => entryToText(e.edition) },
+          { label: "Date", get: (e) => entryToText(e.date) },
+        ]}
+      />
+
+      <ObjectTable
+        title="Hardware / VE Platform (config/.ucs_platform)"
+        rows={objectsOfType(objects, "sys platform")}
+        columns={[
+          { label: "Platform", get: (e) => entryToText(e.platform) },
+          { label: "Family", get: (e) => entryToText(e.family) },
+          { label: "Host", get: (e) => entryToText(e.host) },
+          { label: "Systype", get: (e) => entryToText(e.systype) },
+        ]}
+      />
+
+      <ObjectTable
+        title="License (config/bigip.license -- not sys provision)"
+        rows={objects.filter((o) => o.object_type === "sys license" && o.name === "current")}
+        columns={[
+          { label: "Usage", get: (e) => entryToText(e.usage) },
+          { label: "Platform ID", get: (e) => entryToText(e.platform_id) },
+          { label: "Licensed Date", get: (e) => entryToText(e.licensed_date) },
+          { label: "Service Check Date", get: (e) => entryToText(e.service_check_date) },
+          { label: "Registration Key", get: (e) => entryToText(e.registration_key) },
+          { label: "Active Modules", get: (e) => entryToText(e.active_modules) },
+        ]}
+      />
+
+      <ObjectTable
+        title="License History (config/bigip.license.<date> backups)"
+        rows={objectsOfType(objects, "sys license-history").sort((a, b) => a.name.localeCompare(b.name))}
+        columns={[
+          { label: "Date", get: (_e, o) => o.name },
+          { label: "Usage", get: (e) => entryToText(e.usage) },
+          { label: "Licensed Date", get: (e) => entryToText(e.licensed_date) },
+          { label: "Service Check Date", get: (e) => entryToText(e.service_check_date) },
+          { label: "Active Modules", get: (e) => entryToText(e.active_modules) },
+        ]}
+      />
+
+      <ObjectTable
         title="Device Identity"
         rows={objectsOfType(objects, "cm device")}
         columns={[
