@@ -51,7 +51,11 @@ def test_route_domain_included_only_when_it_covers_a_selected_vlan():
     )
     tmsh = generate_network_tmsh({vlan.name}, {vlan.name: vlan}, [rd_covering, rd_unrelated])
     assert "/Common/0" in tmsh
-    assert "vlans { %s /Common/other-vlan }" % vlan.name in tmsh
+    # the real route-domain also lists /Common/other-vlan, but this
+    # migration never creates that VLAN -- referencing it would fail
+    # against a real device, so it's trimmed out (see network_generator.py)
+    assert "vlans { %s }" % vlan.name in tmsh
+    assert "other-vlan" not in tmsh
     assert "/Common/5" not in tmsh
 
 

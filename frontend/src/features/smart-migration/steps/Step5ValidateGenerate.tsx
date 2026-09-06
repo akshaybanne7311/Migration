@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { api } from "../../../api/client";
 import { useSelectionKpis, useValidatedSession, useVips } from "../../../api/queries";
-import type { GenerateResult, MigrationPlan, ValidationResult } from "../../../api/types";
+import type { GenerateResult, MigrationPlan, SimulationResult, ValidationResult } from "../../../api/types";
 import { Button, Card, KpiCard, SeverityBadge } from "../../../components/ui";
 import { toast } from "../../../components/toastStore";
 import { exportMigrationPlanToExcel } from "../../../utils/excelExport";
@@ -54,6 +54,54 @@ function ValidationChecklist({ result }: { result: ValidationResult }) {
           {result.overall}
         </span>
       </div>
+    </Card>
+  );
+}
+
+function SimulationPanel({ result }: { result: SimulationResult }) {
+  const failedSteps = result.steps.filter((s) => s.outcome === "error");
+  return (
+    <Card className="p-4 mb-4">
+      <div className="flex items-center justify-between mb-2">
+        <div className="text-sm font-medium text-slate-800">Simulation (mock BIG-IP dry run)</div>
+        <span className={`text-sm font-semibold ${result.overall === "PASS" ? "text-emerald-600" : "text-red-600"}`}>
+          {result.overall} — {result.succeeded}/{result.total} steps
+        </span>
+      </div>
+      <p className="text-xs text-slate-500 mb-3">
+        Replays every generated REST call, in order, against a local mock device store — catches a duplicate
+        create, a step that references something an earlier step never created, or a PATCH aimed at something
+        that was never there. This is not a real device: it can't catch licensing, platform, or hardware-specific
+        checks a live BIG-IP would.
+      </p>
+      {failedSteps.length === 0 ? (
+        <div className="text-sm text-emerald-700">Every step would apply cleanly, in this order.</div>
+      ) : (
+        <div className="space-y-1.5">
+          {failedSteps.map((s) => (
+            <div key={s.step} className="text-xs bg-red-50 border border-red-200 rounded-md px-2 py-1.5">
+              <span className="font-mono text-red-700">
+                Step {s.step}: {s.method} {s.path}
+              </span>
+              <div className="text-red-600 mt-0.5">{s.message}</div>
+            </div>
+          ))}
+        </div>
+      )}
+      <details className="mt-3">
+        <summary className="text-xs text-slate-500 cursor-pointer select-none">Show all {result.total} steps</summary>
+        <div className="mt-2 max-h-64 overflow-auto space-y-1">
+          {result.steps.map((s) => (
+            <div key={s.step} className="text-xs font-mono flex items-center gap-2">
+              <span className={s.outcome === "ok" ? "text-emerald-600" : "text-red-600"}>{s.outcome === "ok" ? "✓" : "✗"}</span>
+              <span className="text-slate-400">{s.step}.</span>
+              <span className="text-slate-600">
+                {s.method} {s.path}
+              </span>
+            </div>
+          ))}
+        </div>
+      </details>
     </Card>
   );
 }
@@ -163,6 +211,8 @@ export function Step5ValidateGenerate() {
   const [error, setError] = useState<string | null>(null);
   const [validation, setValidation] = useState<ValidationResult | null>(null);
   const [generated, setGenerated] = useState<GenerateResult | null>(null);
+  const [simulation, setSimulation] = useState<SimulationResult | null>(null);
+  const [simulating, setSimulating] = useState(false);
   const [exporting, setExporting] = useState<"excel" | "sop" | "lld" | null>(null);
 
   const selectedVips = (vipsData?.items ?? []).filter((v) => selectedVipNames.has(v.name));
@@ -272,6 +322,26 @@ export function Step5ValidateGenerate() {
     }
   }
 
+  async function handleSimulate() {
+    if (!sessionId || !planId) return;
+    setSimulating(true);
+    setError(null);
+    try {
+      const result = await api.simulatePlan(sessionId, planId);
+      setSimulation(result.simulation);
+      toast(
+        result.simulation.overall === "PASS" ? "success" : "error",
+        result.simulation.overall === "PASS"
+          ? `Simulation passed: ${result.simulation.succeeded}/${result.simulation.total} steps would apply cleanly.`
+          : `Simulation found ${result.simulation.failed} step(s) that would fail — see details below.`,
+      );
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Simulation failed");
+    } finally {
+      setSimulating(false);
+    }
+  }
+
   return (
     <div>
       <div className="mb-5">
@@ -368,6 +438,13 @@ export function Step5ValidateGenerate() {
         </Button>
         <Button
           variant="secondary"
+          onClick={handleSimulate}
+          disabled={simulating || !generated}
+        >
+          {simulating ? "Simulating…" : "Simulate (dry run)"}
+        </Button>
+        <Button
+          variant="secondary"
           onClick={handleExportExcel}
           disabled={exporting !== null || selectedVips.length === 0}
         >
@@ -391,6 +468,7 @@ export function Step5ValidateGenerate() {
       </div>
 
       {validation && <ValidationChecklist result={validation} />}
+      {simulation && <SimulationPanel result={simulation} />}
       {generated && <GeneratedOutput result={generated} />}
     </div>
   );

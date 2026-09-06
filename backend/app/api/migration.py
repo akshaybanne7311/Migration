@@ -1,4 +1,5 @@
 import sqlite3
+from typing import Any, Dict
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
 from pydantic import BaseModel
@@ -24,6 +25,7 @@ from app.migration.node_cascade import NodeCascadeError
 from app.migration.plan_repository import create_plan, delete_plan, get_plan, update_plan
 from app.models.change_set import MigrationPlan, NodeChange, PoolMemberEdit, VipException
 from app.models.validation import Severity, ValidationCheck, ValidationResult
+from app.simulation.mock_bigip import simulate
 from app.storage.repositories import (
     MonitorRepository,
     NodeRepository,
@@ -188,14 +190,10 @@ def validate_migration_plan(
     return run_validation(vi)
 
 
-@router.post("/{plan_id}/generate")
-def generate_migration_outputs(
-    session_id: str, plan_id: str, conn: sqlite3.Connection = Depends(get_session_db)
-):
-    plan = get_plan(conn, plan_id)
-    if plan is None:
-        raise HTTPException(status_code=404, detail="migration plan not found")
-
+def _resolve_and_generate(conn: sqlite3.Connection, plan: MigrationPlan):
+    """Shared by /generate and /simulate so the two can never drift --
+    both need the exact same resolved plan, validation, and generated
+    REST calls; only what they do with the result differs."""
     resolved, error, maps = _resolve_or_error(conn, plan)
     if resolved is None:
         raise HTTPException(status_code=422, detail=error)
@@ -246,11 +244,61 @@ def generate_migration_outputs(
         tmsh = network_tmsh + tmsh
         rest_calls = network_rest + rest_calls
 
+    return tmsh, rest_calls, as3, validation, (nodes_by_name, pools_by_name, vips_by_name, vlans_by_name, monitors_by_name)
+
+
+@router.post("/{plan_id}/generate")
+def generate_migration_outputs(
+    session_id: str, plan_id: str, conn: sqlite3.Connection = Depends(get_session_db)
+):
+    plan = get_plan(conn, plan_id)
+    if plan is None:
+        raise HTTPException(status_code=404, detail="migration plan not found")
+
+    tmsh, rest_calls, as3, validation, _maps = _resolve_and_generate(conn, plan)
+
     return {
         "tmsh": tmsh,
         "rest": [c.model_dump() for c in rest_calls],
         "as3": as3,
         "ansible": generate_ansible_playbook(rest_calls),
+        "validation": validation.model_dump(),
+        "output_mode": plan.output_mode,
+    }
+
+
+@router.post("/{plan_id}/simulate")
+def simulate_migration_plan(
+    session_id: str, plan_id: str, conn: sqlite3.Connection = Depends(get_session_db)
+):
+    """Replays this plan's generated REST calls, in order, against a mock
+    BIG-IP object store -- see app/simulation/mock_bigip.py for exactly
+    what this does and doesn't catch. For "apply changes to existing
+    objects" mode, the mock is seeded with the session's real current
+    nodes/pools/virtuals/monitors/VLANs (what changes_only mode assumes
+    already exists on the target); for full-recreate, the mock starts
+    empty, since the whole point is standing everything up from nothing."""
+    plan = get_plan(conn, plan_id)
+    if plan is None:
+        raise HTTPException(status_code=404, detail="migration plan not found")
+
+    _tmsh, rest_calls, _as3, validation, maps = _resolve_and_generate(conn, plan)
+    nodes_by_name, pools_by_name, vips_by_name, vlans_by_name, monitors_by_name = maps
+
+    seed: Dict[str, Dict[str, Any]] = {}
+    if plan.output_mode != "full_recreate":
+        seed = {
+            "ltm/node": {n: {} for n in nodes_by_name},
+            "ltm/pool": {p: {} for p in pools_by_name},
+            "ltm/virtual": {v: {} for v in vips_by_name},
+            "ltm/monitor": {m: {} for m in monitors_by_name},
+            "net/vlan": {v: {} for v in vlans_by_name},
+        }
+
+    result = simulate(rest_calls, seed=seed)
+
+    return {
+        "simulation": result.model_dump(),
         "validation": validation.model_dump(),
         "output_mode": plan.output_mode,
     }

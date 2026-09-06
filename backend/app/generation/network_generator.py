@@ -120,7 +120,15 @@ def generate_network_tmsh(
         key=lambda o: o.name,
     )
     for o in route_domains:
-        lines.append(_generic_create("net route-domain", o.name, _parse(o.entries_json)))
+        entries = _parse(o.entries_json)
+        # The real route-domain's vlans list is device-wide; this migration
+        # only creates the subset of VLANs the selected VIPs actually use
+        # (by design -- see the module docstring). Referencing a VLAN this
+        # run never creates would fail against a real device (caught by
+        # app/simulation/mock_bigip.py during development), so the vlans
+        # list is trimmed to exactly what's actually being created here.
+        entries["vlans"] = [v for v in (entries.get("vlans") or []) if v in vlan_names]
+        lines.append(_generic_create("net route-domain", o.name, entries))
 
     routes = sorted((o for o in system_objects if o.object_type == "net route"), key=lambda o: o.name)
     for o in routes:
@@ -188,7 +196,9 @@ def generate_network_rest(
         key=lambda o: o.name,
     )
     for o in route_domains:
-        calls.append(RestCall(method="POST", path="/mgmt/tm/net/route-domain", body=_rest_body(_parse(o.entries_json), o.name)))
+        entries = _parse(o.entries_json)
+        entries["vlans"] = [v for v in (entries.get("vlans") or []) if v in vlan_names]  # see tmsh generator for why
+        calls.append(RestCall(method="POST", path="/mgmt/tm/net/route-domain", body=_rest_body(entries, o.name)))
 
     routes = sorted((o for o in system_objects if o.object_type == "net route"), key=lambda o: o.name)
     for o in routes:

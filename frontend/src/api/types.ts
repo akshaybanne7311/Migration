@@ -232,6 +232,29 @@ export interface ConfigRevision {
   contains_secret: boolean;
 }
 
+export interface SimulationStep {
+  step: number;
+  method: string;
+  path: string;
+  name: string;
+  outcome: "ok" | "error";
+  message: string;
+}
+
+export interface SimulationResult {
+  steps: SimulationStep[];
+  total: number;
+  succeeded: number;
+  failed: number;
+  overall: "PASS" | "FAILED";
+}
+
+export interface SimulateResponse {
+  simulation: SimulationResult;
+  validation: ValidationResult;
+  output_mode: OutputMode;
+}
+
 export interface GraphNode {
   type: string;
   name: string;

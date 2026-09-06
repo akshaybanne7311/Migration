@@ -12,6 +12,7 @@ import type {
   Pool,
   SelectionCounts,
   SessionOut,
+  SimulateResponse,
   SystemObject,
   Vip,
   ValidationResult,
@@ -149,6 +150,10 @@ export const api = {
   generatePlan: (sessionId: string, planId: string) =>
     http
       .post<GenerateResult>(`/sessions/${sessionId}/migration-plans/${planId}/generate`)
+      .then((r) => r.data),
+  simulatePlan: (sessionId: string, planId: string) =>
+    http
+      .post<SimulateResponse>(`/sessions/${sessionId}/migration-plans/${planId}/simulate`)
       .then((r) => r.data),
   importCsv: (sessionId: string, csvType: CsvImportType, selectedVips: string[], file: File) => {
     const form = new FormData();
