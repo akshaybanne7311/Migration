@@ -304,4 +304,67 @@ def run_health_check(conn: sqlite3.Connection) -> List[ValidationCheck]:
         )
     )
 
+    # -- duplicate node IP addresses (two logical node names pointing at
+    # the same real address) -- a real migration risk: creating both on a
+    # target device either conflicts or silently makes one redundant.
+    addr_to_nodes: Dict[str, List[str]] = {}
+    for n in nodes:
+        addr_to_nodes.setdefault(n.address, []).append(n.name)
+    duplicate_addresses = ["%s -> %s" % (addr, ", ".join(names)) for addr, names in addr_to_nodes.items() if len(names) > 1]
+    checks.append(
+        ValidationCheck(
+            id="duplicate_node_addresses",
+            label="Duplicate node addresses",
+            severity=Severity.WARN if duplicate_addresses else Severity.PASS,
+            details=(
+                "%d address(es) are claimed by more than one node object" % len(duplicate_addresses)
+                if duplicate_addresses
+                else "every node has a unique address"
+            ),
+            affected=duplicate_addresses,
+        )
+    )
+
+    # -- VIP persistence profile references that don't resolve to a real
+    # parsed persistence object (same pattern as vip_vlan_refs/
+    # self_ip_vlan_refs above, for a different reference type)
+    persistence_names = {o.name for o in system_objects if o.object_type.startswith("ltm persistence ")}
+    dangling_persistence = [
+        "%s -> %s" % (v.name, v.persistence) for v in vips if v.persistence and v.persistence not in persistence_names
+    ]
+    checks.append(
+        ValidationCheck(
+            id="vip_persistence_refs",
+            label="Virtual server persistence profile references",
+            severity=Severity.BLOCKED if dangling_persistence else Severity.PASS,
+            details=(
+                "%d virtual server persistence reference(s) don't match any parsed persistence object" % len(dangling_persistence)
+                if dangling_persistence
+                else "every virtual server persistence reference resolves"
+            ),
+            affected=dangling_persistence,
+        )
+    )
+
+    # -- VIP iRule references that don't resolve to a real parsed iRule
+    irule_names = {o.name for o in system_objects if o.object_type == "ltm rule"}
+    dangling_irules = []
+    for v in vips:
+        for irule_name in v.irules:
+            if irule_name not in irule_names:
+                dangling_irules.append("%s -> %s" % (v.name, irule_name))
+    checks.append(
+        ValidationCheck(
+            id="vip_irule_refs",
+            label="Virtual server iRule references",
+            severity=Severity.BLOCKED if dangling_irules else Severity.PASS,
+            details=(
+                "%d virtual server iRule reference(s) don't match any parsed iRule" % len(dangling_irules)
+                if dangling_irules
+                else "every virtual server iRule reference resolves"
+            ),
+            affected=dangling_irules,
+        )
+    )
+
     return checks
