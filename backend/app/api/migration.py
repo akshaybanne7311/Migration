@@ -13,6 +13,7 @@ from app.generation.full_recreate import (
     generate_full_recreate_rest,
     generate_full_recreate_tmsh,
 )
+from app.generation.network_generator import generate_network_rest, generate_network_tmsh
 from app.generation.rest_generator import generate_rest
 from app.generation.tmsh_generator import generate_tmsh
 from app.graph.builder import build_dependency_graph
@@ -27,6 +28,7 @@ from app.storage.repositories import (
     MonitorRepository,
     NodeRepository,
     PoolRepository,
+    SystemObjectRepository,
     VipRepository,
     VlanRepository,
 )
@@ -223,10 +225,26 @@ def generate_migration_outputs(
         tmsh = generate_full_recreate_tmsh(units)
         rest_calls = generate_full_recreate_rest(units)
         as3 = generate_full_recreate_as3(units)
+        vlan_names = {v for vu in units.vips for v in (vu.effective.get("vlans") or vu.vip.vlans)}
     else:
         tmsh = generate_tmsh(context, vips_by_name)
         rest_calls = generate_rest(context, vips_by_name)
         as3 = generate_as3(context, vips_by_name, pools_by_name, nodes_by_name)
+        vlan_names = {
+            v
+            for name in plan.selected_vips
+            for v in (context.vip_effective.get(name, {}).get("vlans") or (vips_by_name[name].vlans if name in vips_by_name else []))
+        }
+
+    # create_network_objects means the plan owns network-layer lifecycle,
+    # not just LTM objects -- see app/generation/network_generator.py for
+    # why this previously did nothing beyond tightening validation.
+    if plan.create_network_objects and vlan_names:
+        system_objects = SystemObjectRepository.list(conn)
+        network_tmsh = generate_network_tmsh(vlan_names, vlans_by_name, system_objects)
+        network_rest = generate_network_rest(vlan_names, vlans_by_name, system_objects)
+        tmsh = network_tmsh + tmsh
+        rest_calls = network_rest + rest_calls
 
     return {
         "tmsh": tmsh,
