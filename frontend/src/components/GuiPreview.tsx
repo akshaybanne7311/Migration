@@ -303,16 +303,18 @@ function PoolListView({ pools }: { pools: Pool[] }) {
   return (
     <ExpandableListView
       rows={pools}
-      columns={["Status", "Name", "Members", "Monitors", "Load Balancing", "Partition"]}
+      columns={["Status", "Name", "Description", "Members", "Monitors", "Load Balancing", "Service Down Action", "Partition"]}
       renderCells={(p) => [
         <>
           <StatusDot up={p.members.some((m) => m.session_state !== "user-disabled")} />
           {p.members.length > 0 ? "Available" : "No members"}
         </>,
         p.name.replace("/Common/", ""),
+        stanzaField(p.source_stanza_json, "description") ?? "—",
         `${p.members.length} member${p.members.length === 1 ? "" : "s"}`,
         p.monitor_names.length ? p.monitor_names.map((m) => m.replace("/Common/", "")).join(", ") : "None",
         stanzaField(p.source_stanza_json, "load-balancing-mode") ?? "round-robin",
+        stanzaField(p.source_stanza_json, "service-down-action") ?? "None",
         p.partition,
       ]}
     />
@@ -324,13 +326,14 @@ function NodeListView({ nodes }: { nodes: NodeObj[] }) {
   return (
     <ExpandableListView
       rows={nodes}
-      columns={["Status", "Name", "Address", "Family", "Used by pools", "Used by VIPs", "Partition"]}
+      columns={["Status", "Name", "Description", "Address", "Family", "Used by pools", "Used by VIPs", "Partition"]}
       renderCells={(n) => [
         <>
           <StatusDot up={n.state !== "user-disabled"} />
           {n.state ?? "Enabled"}
         </>,
         n.name.replace("/Common/", ""),
+        stanzaField(n.source_stanza_json, "description") ?? "—",
         n.address,
         n.address_family.toUpperCase(),
         n.pool_count ?? "—",
@@ -828,6 +831,14 @@ export function GuiPreview({
     return match ? parseEntries(match.entries_json) : null;
   }, [systemObjects, openVip.destination_address]);
 
+  // Extra real fields TMOS captured for this virtual that the typed Vip
+  // model doesn't have its own column for -- pulled straight from the raw
+  // parsed stanza rather than re-parsed, so these can only ever show what
+  // the archive actually had (confirmed present across all 8 real devices:
+  // description, source, source-port, translate-address, translate-port,
+  // serverssl-use-sni).
+  const vipStanza = useMemo(() => parseEntries(openVip.source_stanza_json), [openVip.source_stanza_json]);
+
   const monitors = useMemo(() => {
     const byName = new Map<string, Set<string>>();
     for (const p of allPools) {
@@ -1318,8 +1329,17 @@ export function GuiPreview({
                     <tbody>
                       <SectionHeader label="General Properties" />
                       <EditableRow label="Name" value={fields.name.replace("/Common/", "")} dirty={dirty.name} onChange={(v) => setFields((f) => ({ ...f, name: v.startsWith("/") ? v : `/Common/${v}` }))} />
+                      <PropRow label="Description" value={entryToText(vipStanza.description)} />
                       <PropRow label="Partition / Path" value="Common" />
                       <PropRow label="Type" value="Standard" />
+                      <PropRow
+                        label="Source"
+                        value={
+                          entryToText(vipStanza.source) === "—"
+                            ? "0.0.0.0/0 (default -- not explicitly set in config)"
+                            : entryToText(vipStanza.source)
+                        }
+                      />
                       <EditableRow
                         label="Destination Address"
                         value={fields.destinationAddress}
@@ -1356,7 +1376,13 @@ export function GuiPreview({
                         onChange={(v) => setFields((f) => ({ ...f, vlan: v.startsWith("/") ? v : `/Common/${v}` }))}
                       />
                       <PropRow label="VLAN Traffic" value={openVip.vlans_enabled ? "Enabled on" : "Disabled on"} />
+                      <PropRow label="Source Port" value={entryToText(vipStanza["source-port"]) === "—" ? "Preserve" : entryToText(vipStanza["source-port"])} />
                       <PropRow label="Source Address Translation" value={openVip.snat_type ?? "None"} />
+                      <PropRow label="Address Translation" value={entryToText(vipStanza["translate-address"]) === "—" ? "Enabled" : entryToText(vipStanza["translate-address"])} />
+                      <PropRow label="Port Translation" value={entryToText(vipStanza["translate-port"]) === "—" ? "Enabled" : entryToText(vipStanza["translate-port"])} />
+                      {vipStanza["serverssl-use-sni"] !== undefined && (
+                        <PropRow label="SSL Server SNI" value={entryToText(vipStanza["serverssl-use-sni"])} />
+                      )}
                       <PropRow label="Profiles" value={openVip.profiles.length ? openVip.profiles.map((p) => p.name).join(", ") : "—"} />
                       <PropRow label="Health Monitors" value={openVip.monitor_names.length ? openVip.monitor_names.map((m) => m.replace("/Common/", "")).join(", ") : "—"} />
 
