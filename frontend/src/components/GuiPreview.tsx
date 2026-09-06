@@ -322,6 +322,69 @@ function stanzaField(json: string, key: string): string | undefined {
   }
 }
 
+function PoolDetail({ pool }: { pool: Pool }) {
+  const entries = parseEntries(pool.source_stanza_json);
+  return (
+    <>
+      <table className="w-full border-collapse mb-3" style={{ border: `1px solid ${UI.border}` }}>
+        <tbody>
+          <SectionHeader label="General Properties" />
+          <PropRow label="Name" value={pool.name.replace("/Common/", "")} />
+          <PropRow label="Description" value={entryToText(entries.description)} />
+          <PropRow label="Partition / Path" value={pool.partition} />
+
+          <SectionHeader label="Configuration" />
+          <PropRow label="Health Monitors" value={pool.monitor_names.length ? pool.monitor_names.map((m) => m.replace("/Common/", "")).join(", ") : "None"} />
+          <PropRow label="Load Balancing Method" value={entryToText(entries["load-balancing-mode"]) === "—" ? "Round Robin (default)" : entryToText(entries["load-balancing-mode"])} />
+          <PropRow label="Action On Service Down" value={entryToText(entries["service-down-action"]) === "—" ? "None (default)" : entryToText(entries["service-down-action"])} />
+          <PropRow label="Priority Group Activation" value="Disabled (default)" />
+          <PropRow label="Slow Ramp Time" value="10 seconds (default)" />
+          <PropRow label="Reselect Tries" value="0 (default)" />
+        </tbody>
+      </table>
+
+      <table className="w-full border-collapse mb-3" style={{ border: `1px solid ${UI.border}` }}>
+        <tbody>
+          <SectionHeader label={`Pool Members (${pool.members.length})`} />
+          <tr>
+            <td colSpan={2} className="p-0">
+              <table className="w-full text-[12px]">
+                <thead>
+                  <tr style={{ background: "#dfe6ec" }}>
+                    <th className="text-left px-3 py-1.5 border" style={{ borderColor: UI.border }}>Status</th>
+                    <th className="text-left px-3 py-1.5 border" style={{ borderColor: UI.border }}>Member</th>
+                    <th className="text-left px-3 py-1.5 border" style={{ borderColor: UI.border }}>Address</th>
+                    <th className="text-left px-3 py-1.5 border" style={{ borderColor: UI.border }}>Port</th>
+                    <th className="text-left px-3 py-1.5 border" style={{ borderColor: UI.border }}>Connection Limit</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {pool.members.map((m) => (
+                    <tr key={`${m.node_name}:${m.port}`} style={{ background: UI.white }}>
+                      <td className="px-3 py-1.5 border" style={{ borderColor: UI.border }}>
+                        <span className="inline-flex items-center gap-1.5">
+                          <StatusDot up={m.session_state !== "user-disabled"} />
+                          {m.session_state ?? "Enabled"}
+                        </span>
+                      </td>
+                      <td className="px-3 py-1.5 border" style={{ borderColor: UI.border }}>{m.node_name.replace("/Common/", "")}</td>
+                      <td className="px-3 py-1.5 border font-mono" style={{ borderColor: UI.border }}>{stanzaField(m.source_stanza_json, "address") ?? "—"}</td>
+                      <td className="px-3 py-1.5 border font-mono" style={{ borderColor: UI.border }}>{m.port}</td>
+                      <td className="px-3 py-1.5 border" style={{ borderColor: UI.border }}>{m.connection_limit ?? "0 (unlimited, default)"}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+
+      <RawStanzaBlock label="Raw parsed config (from bigip.conf)" json={pool.source_stanza_json} />
+    </>
+  );
+}
+
 function PoolListView({ pools }: { pools: Pool[] }) {
   if (pools.length === 0) return <EmptySectionNote text="No pools parsed from this session." />;
   return (
@@ -341,7 +404,47 @@ function PoolListView({ pools }: { pools: Pool[] }) {
         stanzaField(p.source_stanza_json, "service-down-action") ?? "None",
         p.partition,
       ]}
+      renderExpanded={(p) => <PoolDetail pool={p} />}
     />
+  );
+}
+
+function NodeDetail({ node }: { node: NodeObj }) {
+  const entries = parseEntries(node.source_stanza_json);
+  return (
+    <>
+      <table className="w-full border-collapse mb-3" style={{ border: `1px solid ${UI.border}` }}>
+        <tbody>
+          <SectionHeader label="General Properties" />
+          <PropRow label="Name" value={node.name.replace("/Common/", "")} />
+          <PropRow label="Description" value={entryToText(entries.description)} />
+          <PropRow label="Address" value={node.address} />
+          <PropRow label="Address Family" value={node.address_family.toUpperCase()} />
+          <PropRow label="Partition / Path" value={node.partition} />
+
+          <SectionHeader label="Configuration" />
+          <PropRow
+            label="State"
+            value={
+              <span className="inline-flex items-center gap-1.5">
+                <StatusDot up={node.state !== "user-disabled"} />
+                {node.state ?? "Enabled"}
+              </span>
+            }
+          />
+          <PropRow label="Health Monitor" value={entryToText(entries.monitor) === "—" ? "Default (inherited from pool monitor)" : entryToText(entries.monitor)} />
+          <PropRow label="Ratio" value="1 (default)" />
+          <PropRow label="Connection Limit" value="0 -- unlimited (default)" />
+          <PropRow label="Rate Limit" value="Disabled (default)" />
+          <PropRow label="Dynamic Ratio" value="1 (default)" />
+
+          <SectionHeader label="Referenced By" />
+          <PropRow label="Pools" value={node.pool_count ?? 0} />
+          <PropRow label="Virtual Servers" value={node.vip_count ?? 0} />
+        </tbody>
+      </table>
+      <RawStanzaBlock label="Raw parsed config (from bigip.conf)" json={node.source_stanza_json} />
+    </>
   );
 }
 
@@ -364,6 +467,7 @@ function NodeListView({ nodes }: { nodes: NodeObj[] }) {
         n.vip_count ?? "—",
         n.partition,
       ]}
+      renderExpanded={(n) => <NodeDetail node={n} />}
     />
   );
 }
