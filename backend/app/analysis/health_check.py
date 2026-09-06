@@ -237,4 +237,48 @@ def run_health_check(conn: sqlite3.Connection) -> List[ValidationCheck]:
         )
     )
 
+    # -- certificate expiry (real X.509 files pulled from the archive, not
+    # bigip.conf's cm cert stanza -- that only has cache-path/checksum, no
+    # expiry date; see app/ingest/certificates.py)
+    CERT_WARN_WINDOW_DAYS = 60
+    certs = [o for o in system_objects if o.object_type == "x509 certificate"]
+    expired_certs = []
+    expiring_certs = []
+    for o in certs:
+        e = _entries(o.entries_json)
+        days = e.get("days_until_expiry")
+        if not isinstance(days, int):
+            continue
+        label = "%s (%s)" % (o.name, e.get("not_after", "")[:10])
+        if e.get("is_expired"):
+            expired_certs.append("%s -- expired %d day(s) ago" % (label, -days))
+        elif days <= CERT_WARN_WINDOW_DAYS:
+            expiring_certs.append("%s -- expires in %d day(s)" % (label, days))
+    checks.append(
+        ValidationCheck(
+            id="certificates_expired",
+            label="Expired certificates",
+            severity=Severity.BLOCKED if expired_certs else Severity.PASS,
+            details=(
+                "%d certificate(s) are already expired" % len(expired_certs)
+                if expired_certs
+                else ("no certificates parsed from this session" if not certs else "no parsed certificate is expired")
+            ),
+            affected=expired_certs,
+        )
+    )
+    checks.append(
+        ValidationCheck(
+            id="certificates_expiring_soon",
+            label="Certificates expiring soon (%d days)" % CERT_WARN_WINDOW_DAYS,
+            severity=Severity.WARN if expiring_certs else Severity.PASS,
+            details=(
+                "%d certificate(s) expire within %d days" % (len(expiring_certs), CERT_WARN_WINDOW_DAYS)
+                if expiring_certs
+                else ("no certificates parsed from this session" if not certs else "no parsed certificate expires soon")
+            ),
+            affected=expiring_certs,
+        )
+    )
+
     return checks

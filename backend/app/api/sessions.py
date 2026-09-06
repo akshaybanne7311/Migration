@@ -6,7 +6,9 @@ from fastapi import APIRouter, File, HTTPException, UploadFile
 from pydantic import BaseModel
 
 from app.config import settings
-from app.ingest.archive import ArchiveError, extract_config_text
+from app.ingest.archive import ArchiveError, extract_certificate_files, extract_command_history, extract_config_text
+from app.ingest.certificates import certificate_to_system_object, parse_certificates
+from app.ingest.command_history import parse_command_history
 from app.ingest.ingest_pipeline import parse_bigip_conf
 from app.storage import registry_db, session_db
 
@@ -90,9 +92,33 @@ async def upload_session(file: UploadFile = File(...)) -> SessionOut:
     try:
         text = extract_config_text(archive_path)
         config = parse_bigip_conf(text)
+
+        # Certificates ride along in config.system_objects (same table/API
+        # as everything else system-level). Best-effort and independent of
+        # the core config parse succeeding above -- a device with no
+        # extractable certs, or an archive format these two skip cleanly,
+        # should never turn a good config parse into a failed session.
+        try:
+            cert_files = extract_certificate_files(archive_path)
+            for cert in parse_certificates(cert_files):
+                config.system_objects.append(certificate_to_system_object(cert))
+        except Exception:  # noqa: BLE001 - bonus data, never blocks the upload
+            pass
+
         conn = session_db.create_session_db(session_id)
         try:
             session_db.write_parsed_config(conn, config)
+
+            try:
+                history_files = extract_command_history(archive_path)
+                all_entries = [
+                    entry
+                    for user, raw in history_files.items()
+                    for entry in parse_command_history(raw, user)
+                ]
+                session_db.write_command_history(conn, all_entries)
+            except Exception:  # noqa: BLE001 - bonus data, never blocks the upload
+                pass
         finally:
             conn.close()
         registry_db.update_status(session_id, "ready")

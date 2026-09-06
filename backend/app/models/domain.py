@@ -91,6 +91,17 @@ class SystemObject(BaseModel):
     entries_json: str = "{}"
 
 
+class CommandHistoryEntry(BaseModel):
+    """One real tmsh command from a `.tmsh-history-<user>` file inside the
+    archive -- shell history, not device config, so it lives outside
+    ParsedConfig/system_objects and is written via its own table."""
+
+    user: str
+    timestamp: str
+    command: str
+    is_mutating: bool
+
+
 class ParsedConfig(BaseModel):
     """Everything extracted from one bigip.conf, before any DB write."""
 

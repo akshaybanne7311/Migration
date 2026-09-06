@@ -199,6 +199,21 @@ export interface HealthCheckResult {
   overall: "CLEAN" | "MINOR_FINDINGS" | "NEEDS_ATTENTION";
 }
 
+/** One real tmsh command from a `.tmsh-history-<user>` file inside the
+ * UCS/QKView archive -- shell history, not device config. */
+export interface CommandHistoryEntry {
+  user: string;
+  timestamp: string;
+  command: string;
+  is_mutating: boolean;
+}
+
+export interface CommandHistoryListOut {
+  items: CommandHistoryEntry[];
+  total: number;
+  total_all: number;
+}
+
 export interface RestCall {
   method: string;
   path: string;

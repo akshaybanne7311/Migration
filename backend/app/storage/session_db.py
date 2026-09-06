@@ -182,3 +182,15 @@ def write_parsed_config(conn: sqlite3.Connection, config: ParsedConfig) -> None:
 
         for warning in config.warnings:
             conn.execute("INSERT INTO ingest_warnings (message) VALUES (?)", (warning,))
+
+
+def write_command_history(conn: sqlite3.Connection, entries) -> None:
+    """Separate from write_parsed_config: command history comes from
+    `.tmsh-history-<user>` files inside the archive, extracted independently
+    of (and via a different code path than) the bigip.conf text parse."""
+    with conn:
+        for e in entries:
+            conn.execute(
+                "INSERT INTO command_history (user, timestamp, command, is_mutating) VALUES (?, ?, ?, ?)",
+                (e.user, e.timestamp, e.command, 1 if e.is_mutating else 0),
+            )

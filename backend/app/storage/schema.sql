@@ -110,6 +110,21 @@ CREATE TABLE system_objects (
 );
 CREATE INDEX idx_system_objects_type ON system_objects(object_type);
 
+-- Real, timestamped tmsh command history pulled from .tmsh-history-<user>
+-- files inside the UCS/QKView archive (not from bigip.conf -- these are
+-- shell history, not device config). Populated best-effort: absent for a
+-- raw .conf upload or an archive that never captured /home, and that's
+-- fine, this is bonus data on top of the core config parse.
+CREATE TABLE command_history (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user TEXT NOT NULL,
+    timestamp TEXT NOT NULL,
+    command TEXT NOT NULL,
+    is_mutating INTEGER NOT NULL DEFAULT 0
+);
+CREATE INDEX idx_command_history_mutating ON command_history(is_mutating);
+CREATE INDEX idx_command_history_user ON command_history(user);
+
 CREATE TABLE ingest_warnings (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     message TEXT NOT NULL

@@ -9,6 +9,7 @@ from typing import List, Optional
 
 from app.models.domain import (
     AddressFamily,
+    CommandHistoryEntry,
     Monitor,
     Node,
     Pool,
@@ -140,6 +141,35 @@ class SystemObjectRepository:
             SystemObject(object_type=r["object_type"], name=r["name"], entries_json=r["entries_json"])
             for r in rows
         ]
+
+
+class CommandHistoryRepository:
+    @staticmethod
+    def list(
+        conn: sqlite3.Connection,
+        mutating_only: bool = False,
+        user: Optional[str] = None,
+    ) -> List[CommandHistoryEntry]:
+        query = "SELECT user, timestamp, command, is_mutating FROM command_history WHERE 1=1"
+        params: List[object] = []
+        if mutating_only:
+            query += " AND is_mutating = 1"
+        if user:
+            query += " AND user = ?"
+            params.append(user)
+        query += " ORDER BY id"
+        rows = conn.execute(query, params).fetchall()
+        return [
+            CommandHistoryEntry(
+                user=r["user"], timestamp=r["timestamp"], command=r["command"], is_mutating=bool(r["is_mutating"])
+            )
+            for r in rows
+        ]
+
+    @staticmethod
+    def count(conn: sqlite3.Connection) -> int:
+        row = conn.execute("SELECT COUNT(*) AS c FROM command_history").fetchone()
+        return row["c"]
 
 
 def _hydrate_vip(conn: sqlite3.Connection, row: sqlite3.Row) -> Vip:

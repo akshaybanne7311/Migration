@@ -10,6 +10,7 @@ import { NodesPage } from "./pages/NodesPage";
 import { SystemConfigPage } from "./pages/SystemConfigPage";
 import { GuiPreviewPage } from "./pages/GuiPreviewPage";
 import { HealthCheckPage } from "./pages/HealthCheckPage";
+import { ChangeHistoryPage } from "./pages/ChangeHistoryPage";
 import { SmartMigrationPage } from "./pages/SmartMigrationPage";
 import {
   ChangeSetPage,
@@ -35,6 +36,7 @@ export default function App() {
         <Route path="/system-config" element={<SystemConfigPage />} />
         <Route path="/gui-preview" element={<GuiPreviewPage />} />
         <Route path="/health-check" element={<HealthCheckPage />} />
+        <Route path="/change-history" element={<ChangeHistoryPage />} />
         <Route path="/smart-migration" element={<SmartMigrationPage />} />
         <Route path="/change-set" element={<ChangeSetPage />} />
         <Route path="/tmsh-generator" element={<TmshGeneratorPage />} />

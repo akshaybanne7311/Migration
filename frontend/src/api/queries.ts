@@ -61,6 +61,14 @@ export function useHealthCheck(sessionId: string | null) {
   });
 }
 
+export function useCommandHistory(sessionId: string | null, opts?: { mutatingOnly?: boolean; user?: string }) {
+  return useQuery({
+    queryKey: ["session", sessionId, "command-history", opts?.mutatingOnly ?? false, opts?.user ?? null],
+    queryFn: () => api.listCommandHistory(sessionId as string, opts),
+    enabled: !!sessionId,
+  });
+}
+
 export function useBackendHealth() {
   return useQuery({
     queryKey: ["health"],

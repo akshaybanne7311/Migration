@@ -100,6 +100,30 @@ export function SystemConfigPage() {
       {nothingParsed && <EmptyState title="No network/system objects parsed" />}
 
       <ObjectTable
+        title="SSL Certificates (real PEM files from the archive)"
+        rows={objectsOfType(objects, "x509 certificate")}
+        columns={[
+          { label: "Common Name", get: (e, o) => entryToText(e.subject_cn ?? o.name) },
+          { label: "Issuer", get: (e) => entryToText(e.issuer_cn) },
+          { label: "Expires", get: (e) => entryToText(e.not_after).slice(0, 10) },
+          {
+            label: "Status",
+            get: (e) => {
+              const days = e.days_until_expiry as number | undefined;
+              if (e.is_expired) return `expired ${Math.abs(days ?? 0)}d ago`;
+              if (typeof days === "number" && days <= 60) return `expires in ${days}d`;
+              return "OK";
+            },
+          },
+          { label: "Self-signed", get: (e) => (e.is_self_signed ? "yes" : "no") },
+          {
+            label: "Source file(s)",
+            get: (e) => (Array.isArray(e.source_paths) ? (e.source_paths as string[]).join(", ") : "—"),
+          },
+        ]}
+      />
+
+      <ObjectTable
         title="Device Identity"
         rows={objectsOfType(objects, "cm device")}
         columns={[

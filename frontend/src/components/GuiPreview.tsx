@@ -25,6 +25,7 @@ type Section =
   | "sys-syslog"
   | "sys-mgmt-routes"
   | "sys-provisioning"
+  | "sys-certificates"
   | "dm-devices"
   | "dm-device-groups"
   | "dm-traffic-groups"
@@ -50,6 +51,7 @@ const SECTION_LABEL: Record<Section, string> = {
   "sys-syslog": "System » Configuration » Device » Syslog",
   "sys-mgmt-routes": "System » Configuration » Device » Management Routes",
   "sys-provisioning": "System » Resource Provisioning",
+  "sys-certificates": "System » Certificate Management » SSL Certificate List",
   "dm-devices": "Device Management » Devices",
   "dm-device-groups": "Device Management » Device Groups",
   "dm-traffic-groups": "Device Management » Traffic Groups",
@@ -73,6 +75,7 @@ const SYSTEM_SUB_SECTIONS: [Section, string][] = [
   ["sys-syslog", "Syslog"],
   ["sys-mgmt-routes", "Management Routes"],
   ["sys-provisioning", "Resource Provisioning"],
+  ["sys-certificates", "SSL Certificates"],
 ];
 
 const DEVICE_MGMT_SUB_SECTIONS: [Section, string][] = [
@@ -576,6 +579,47 @@ function DnsResolverListView({ objects }: { objects: SystemObject[] }) {
         const zoneNames = zones && typeof zones === "object" ? Object.keys(zones as Record<string, unknown>) : [];
         return [r.name.replace("/Common/", ""), zoneNames.length ? zoneNames.join(", ") : "—"];
       }}
+    />
+  );
+}
+
+/** Real X.509 certificates pulled from PEM files inside the archive
+ * (config/ssl/ssl.crt/*, filestore certificate_d/*) -- not device config
+ * stanzas. Sorted server-side by soonest-expiring first. */
+function CertificateListView({ objects }: { objects: SystemObject[] }) {
+  const rows = objectsOfType(objects, "x509 certificate");
+  if (rows.length === 0) return <EmptySectionNote text="No PEM-encoded certificate files were found inside this archive." />;
+  return (
+    <ExpandableListView
+      rows={rows}
+      columns={["Common Name", "Issuer", "Expires", "Status", "Self-signed", "Source file(s)"]}
+      rawJson={(r) => r.entries_json}
+      renderCells={(r) => {
+        const e = parseEntries(r.entries_json);
+        const days = e.days_until_expiry as number | undefined;
+        const expired = Boolean(e.is_expired);
+        const soon = typeof days === "number" && days >= 0 && days <= 60;
+        let status = "OK";
+        if (expired) status = `expired ${Math.abs(days ?? 0)}d ago`;
+        else if (soon) status = `expires in ${days}d`;
+        const sources = Array.isArray(e.source_paths) ? (e.source_paths as string[]) : [];
+        return [
+          entryToText(e.subject_cn ?? r.name),
+          entryToText(e.issuer_cn),
+          entryToText(e.not_after).slice(0, 10),
+          status,
+          e.is_self_signed ? "yes" : "no",
+          sources.length ? sources.join(", ") : "—",
+        ];
+      }}
+      renderExpanded={(r) => (
+        <>
+          <div className="text-[12px] mb-2" style={{ color: UI.textMuted }}>
+            Parsed directly from a real PEM certificate file inside this session's archive — not from bigip.conf.
+          </div>
+          <RawStanzaBlock label="Certificate details" json={r.entries_json} />
+        </>
+      )}
     />
   );
 }
@@ -1174,6 +1218,7 @@ export function GuiPreview({
                   emptyText="No provisioned module info parsed from this session."
                 />
               )}
+              {section === "sys-certificates" && <CertificateListView objects={systemObjects} />}
               {section === "dm-devices" && (
                 <SystemInfoView objects={systemObjects} types={["cm device"]} emptyText="No device identity info parsed from this session." />
               )}

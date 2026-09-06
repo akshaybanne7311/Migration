@@ -15,6 +15,7 @@ import {
   Share2,
   GitCompare,
   ShieldCheck,
+  History,
   type LucideIcon,
 } from "lucide-react";
 
@@ -61,6 +62,7 @@ export const navGroups: NavGroup[] = [
     label: "Analysis",
     items: [
       { label: "Health Check", path: "/health-check", icon: ShieldCheck },
+      { label: "Change History", path: "/change-history", icon: History },
       { label: "Search", path: "/search", icon: Search },
       { label: "Dependencies", path: "/dependencies", icon: Share2 },
       { label: "Compare", path: "/compare", icon: GitCompare },

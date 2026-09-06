@@ -1,5 +1,6 @@
 import axios from "axios";
 import type {
+  CommandHistoryListOut,
   CsvImportResult,
   CsvImportType,
   GenerateResult,
@@ -108,6 +109,12 @@ export const api = {
   health: () => http.get<{ status: string; version: string }>("/health").then((r) => r.data),
   runHealthCheck: (sessionId: string) =>
     http.get<HealthCheckResult>(`/sessions/${sessionId}/health-check`).then((r) => r.data),
+  listCommandHistory: (sessionId: string, opts?: { mutatingOnly?: boolean; user?: string }) =>
+    http
+      .get<CommandHistoryListOut>(`/sessions/${sessionId}/command-history`, {
+        params: { mutating_only: opts?.mutatingOnly ?? undefined, user: opts?.user ?? undefined },
+      })
+      .then((r) => r.data),
 
   // migration plans
   createPlan: (sessionId: string, plan: MigrationPlan) =>
