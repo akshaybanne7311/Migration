@@ -85,6 +85,14 @@ export function useVipDependencyGraph(sessionId: string | null, vip: string | nu
   });
 }
 
+export function useTrafficFlow(sessionId: string | null, vip: string | null, requests = 10) {
+  return useQuery({
+    queryKey: ["session", sessionId, "traffic-flow", vip, requests],
+    queryFn: () => api.getTrafficFlow(sessionId as string, vip as string, requests),
+    enabled: !!sessionId && !!vip,
+  });
+}
+
 export function useBackendHealth() {
   return useQuery({
     queryKey: ["health"],

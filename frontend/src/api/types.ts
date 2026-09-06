@@ -255,6 +255,34 @@ export interface SimulateResponse {
   output_mode: OutputMode;
 }
 
+export interface FlowMember {
+  name: string;
+  address: string;
+  port: number;
+  enabled: boolean;
+}
+
+export interface SimulatedRequest {
+  sequence: number;
+  member_name: string;
+  member_address: string;
+}
+
+export interface TrafficFlowResult {
+  vip_name: string;
+  destination: string;
+  protocol: string;
+  pool_name: string | null;
+  load_balancing_method: string;
+  load_balancing_is_simulated_as_round_robin: boolean;
+  persistence: string | null;
+  snat_type: string | null;
+  monitors: string[];
+  members: FlowMember[];
+  simulated_requests: SimulatedRequest[];
+  note: string;
+}
+
 export interface GraphNode {
   type: string;
   name: string;

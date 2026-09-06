@@ -18,6 +18,7 @@ import type {
   ValidationResult,
   Vlan,
   VipDependencyGraph,
+  TrafficFlowResult,
 } from "./types";
 import { toast } from "../components/toastStore";
 
@@ -129,6 +130,8 @@ export const api = {
       .then((r) => r.data),
   getVipDependencyGraph: (sessionId: string, vip: string) =>
     http.get<VipDependencyGraph>(`/sessions/${sessionId}/dependency-graph`, { params: { vip } }).then((r) => r.data),
+  getTrafficFlow: (sessionId: string, vip: string, requests = 10) =>
+    http.get<TrafficFlowResult>(`/sessions/${sessionId}/traffic-flow`, { params: { vip, requests } }).then((r) => r.data),
 
   // migration plans
   createPlan: (sessionId: string, plan: MigrationPlan) =>

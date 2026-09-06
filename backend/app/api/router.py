@@ -12,6 +12,7 @@ from app.api import (
     pools,
     sessions,
     system_objects,
+    traffic_flow,
     vips,
     vlans,
 )
@@ -28,5 +29,6 @@ api_router.include_router(command_history.router)
 api_router.include_router(config_revisions.router)
 api_router.include_router(certificates.router)
 api_router.include_router(dependency_graph.router)
+api_router.include_router(traffic_flow.router)
 api_router.include_router(health_check.router)
 api_router.include_router(migration.router)
