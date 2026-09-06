@@ -18,7 +18,8 @@ import type {
 } from "./types";
 import { toast } from "../components/toastStore";
 
-const http = axios.create({ baseURL: "/api/v1" });
+const API_BASE = "/api/v1";
+const http = axios.create({ baseURL: API_BASE });
 
 function extractErrorMessage(error: unknown): string {
   if (axios.isAxiosError(error)) {
@@ -115,6 +116,8 @@ export const api = {
         params: { mutating_only: opts?.mutatingOnly ?? undefined, user: opts?.user ?? undefined },
       })
       .then((r) => r.data),
+  certificateDownloadUrl: (sessionId: string, fingerprint: string) =>
+    `${API_BASE}/sessions/${sessionId}/certificates/${fingerprint}/download`,
 
   // migration plans
   createPlan: (sessionId: string, plan: MigrationPlan) =>

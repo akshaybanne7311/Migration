@@ -16,7 +16,7 @@ hardcoded path.
 import re
 import tarfile
 from pathlib import Path
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 _MEMBER_SUFFIXES = ("config/bigip_base.conf", "config/bigip.conf", "config/bigip_user.conf")
 _FALLBACK_SUFFIX = "bigip.conf"
@@ -132,3 +132,24 @@ def extract_certificate_files(archive_path: Path) -> Dict[str, bytes]:
             if content.lstrip().startswith(_PEM_CERT_HEADER):
                 result[member.name] = content
     return result
+
+
+def extract_archive_member(archive_path: Path, member_name: str) -> Optional[bytes]:
+    """Re-extracts one exact file (by its archive-internal path, e.g. one of
+    the `source_paths` recorded on a parsed certificate) so the original
+    bytes -- not the parsed-out fields -- can be handed back for download.
+    Returns None if the archive or member is gone rather than raising, since
+    a session's original archive is deleted when the session is deleted.
+    """
+    path = Path(archive_path)
+    if not path.exists() or not tarfile.is_tarfile(path):
+        return None
+    with tarfile.open(path, "r:*") as tar:
+        try:
+            member = tar.getmember(member_name)
+        except KeyError:
+            return None
+        if not member.isfile():
+            return None
+        extracted = tar.extractfile(member)
+        return extracted.read() if extracted is not None else None

@@ -586,13 +586,13 @@ function DnsResolverListView({ objects }: { objects: SystemObject[] }) {
 /** Real X.509 certificates pulled from PEM files inside the archive
  * (config/ssl/ssl.crt/*, filestore certificate_d/*) -- not device config
  * stanzas. Sorted server-side by soonest-expiring first. */
-function CertificateListView({ objects }: { objects: SystemObject[] }) {
+function CertificateListView({ objects, sessionId }: { objects: SystemObject[]; sessionId: string | null }) {
   const rows = objectsOfType(objects, "x509 certificate");
   if (rows.length === 0) return <EmptySectionNote text="No PEM-encoded certificate files were found inside this archive." />;
   return (
     <ExpandableListView
       rows={rows}
-      columns={["Common Name", "Issuer", "Expires", "Status", "Self-signed", "Source file(s)"]}
+      columns={["Common Name", "Issuer", "Expires", "Status", "Self-signed", "Source file(s)", "Original file"]}
       rawJson={(r) => r.entries_json}
       renderCells={(r) => {
         const e = parseEntries(r.entries_json);
@@ -603,6 +603,7 @@ function CertificateListView({ objects }: { objects: SystemObject[] }) {
         if (expired) status = `expired ${Math.abs(days ?? 0)}d ago`;
         else if (soon) status = `expires in ${days}d`;
         const sources = Array.isArray(e.source_paths) ? (e.source_paths as string[]) : [];
+        const fingerprint = entryToText(e.fingerprint_sha256);
         return [
           entryToText(e.subject_cn ?? r.name),
           entryToText(e.issuer_cn),
@@ -610,6 +611,19 @@ function CertificateListView({ objects }: { objects: SystemObject[] }) {
           status,
           e.is_self_signed ? "yes" : "no",
           sources.length ? sources.join(", ") : "—",
+          sessionId && fingerprint !== "—" ? (
+            <a
+              key="dl"
+              href={api.certificateDownloadUrl(sessionId, fingerprint)}
+              onClick={(evt) => evt.stopPropagation()}
+              className="underline"
+              style={{ color: UI.navyActive }}
+            >
+              Download .crt
+            </a>
+          ) : (
+            "—"
+          ),
         ];
       }}
       renderExpanded={(r) => (
@@ -1218,7 +1232,7 @@ export function GuiPreview({
                   emptyText="No provisioned module info parsed from this session."
                 />
               )}
-              {section === "sys-certificates" && <CertificateListView objects={systemObjects} />}
+              {section === "sys-certificates" && <CertificateListView objects={systemObjects} sessionId={sessionId} />}
               {section === "dm-devices" && (
                 <SystemInfoView objects={systemObjects} types={["cm device"]} emptyText="No device identity info parsed from this session." />
               )}

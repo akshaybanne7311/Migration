@@ -1,3 +1,5 @@
+import type { ReactNode } from "react";
+import { api } from "../api/client";
 import { useSystemObjects, useValidatedSession, useVlans } from "../api/queries";
 import type { SystemObject } from "../api/types";
 import { Card, EmptyState, PageHeader } from "../components/ui";
@@ -33,7 +35,7 @@ function ObjectTable({
 }: {
   title: string;
   rows: SystemObject[];
-  columns: { label: string; get: (entries: Record<string, unknown>, obj: SystemObject) => string }[];
+  columns: { label: string; get: (entries: Record<string, unknown>, obj: SystemObject) => ReactNode }[];
 }) {
   if (rows.length === 0) return null;
   return (
@@ -119,6 +121,21 @@ export function SystemConfigPage() {
           {
             label: "Source file(s)",
             get: (e) => (Array.isArray(e.source_paths) ? (e.source_paths as string[]).join(", ") : "—"),
+          },
+          {
+            label: "Original file",
+            get: (e) => {
+              const fingerprint = typeof e.fingerprint_sha256 === "string" ? e.fingerprint_sha256 : "";
+              if (!sessionId || !fingerprint) return "—";
+              return (
+                <a
+                  href={api.certificateDownloadUrl(sessionId, fingerprint)}
+                  className="text-sky-700 underline hover:text-sky-900"
+                >
+                  Download .crt
+                </a>
+              );
+            },
           },
         ]}
       />
