@@ -324,7 +324,7 @@ export function GuiPreview({
             <span className="text-white font-bold text-lg tracking-tight flex items-center">
               <span
                 className="inline-block h-2.5 w-2.5 rounded-sm mr-2"
-                style={{ background: "var(--cyan, #22d3ee)" }}
+                style={{ background: "var(--cyan, #ff5a1f)" }}
               />
               <span className="text-slate-300 font-normal text-xs">Device Configuration Utility</span>
             </span>

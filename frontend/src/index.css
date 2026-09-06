@@ -16,47 +16,52 @@
 :root {
   color-scheme: dark;
 
-  --bg: #05060d;
-  --bg-glow-1: #0a2a3d;
-  --bg-glow-2: #2a0a3d;
+  /* Softened off-black/off-white rather than true #000/#fff -- pure
+     black-on-white(-ish) at these sizes and this much glow reads as
+     glare/eye strain, especially on OLED screens. Slightly raising the
+     floor and lowering the ceiling keeps strong contrast without the
+     halation. */
+  --bg: #121113;
+  --bg-glow-1: #241508;
+  --bg-glow-2: #180d06;
 
-  --surface: #0b0f1c;
-  --surface-2: #10162a;
-  --surface-3: #161d38;
+  --surface: #18171a;
+  --surface-2: #201e1f;
+  --surface-3: #282524;
 
-  --border-faint: rgba(56, 189, 248, 0.1);
-  --border-soft: rgba(56, 189, 248, 0.18);
-  --border: rgba(56, 189, 248, 0.3);
-  --border-strong: rgba(56, 189, 248, 0.5);
+  --border-faint: rgba(255, 106, 26, 0.08);
+  --border-soft: rgba(255, 106, 26, 0.14);
+  --border: rgba(255, 106, 26, 0.24);
+  --border-strong: rgba(255, 106, 26, 0.42);
 
-  --text-dim: #5c6d94;
-  --text-muted: #8496c2;
-  --text-soft: #a9b8dd;
-  --text: #ccdaf7;
-  --text-bright: #f1f6ff;
+  --text-dim: #756f66;
+  --text-muted: #9a9288;
+  --text-soft: #beb7ac;
+  --text: #dcd5ca;
+  --text-bright: #ede7dc;
 
-  --cyan: #22d3ee;
-  --cyan-bright: #67e8f9;
-  --violet: #a855f7;
-  --magenta: #ff4fd8;
+  --cyan: #ff5a1f;
+  --cyan-bright: #ff8a4c;
+  --violet: #c2410c;
+  --magenta: #ef4444;
 
   --success: #2bffb0;
   --success-strong: #05ffa1;
   --warn: #ffb703;
   --warn-strong: #ffd23f;
-  --danger: #ff2d6d;
-  --danger-strong: #ff5c8a;
+  --danger: #ef4444;
+  --danger-strong: #f87171;
 
-  --glow-cyan: 0 0 14px rgba(34, 211, 238, 0.45), 0 0 2px rgba(34, 211, 238, 0.7);
-  --glow-cyan-lg: 0 0 34px rgba(34, 211, 238, 0.35), 0 0 6px rgba(34, 211, 238, 0.55);
-  --glow-success: 0 0 14px rgba(43, 255, 176, 0.45);
-  --glow-warn: 0 0 14px rgba(255, 183, 3, 0.4);
-  --glow-danger: 0 0 14px rgba(255, 45, 109, 0.45);
+  --glow-cyan: 0 0 12px rgba(255, 90, 31, 0.3), 0 0 2px rgba(255, 90, 31, 0.45);
+  --glow-cyan-lg: 0 0 28px rgba(255, 90, 31, 0.22), 0 0 5px rgba(255, 90, 31, 0.35);
+  --glow-success: 0 0 12px rgba(43, 255, 176, 0.3);
+  --glow-warn: 0 0 12px rgba(255, 183, 3, 0.28);
+  --glow-danger: 0 0 12px rgba(239, 68, 68, 0.3);
 
-  --heading-glow: 0 0 18px rgba(103, 232, 249, 0.18);
-  --kpi-glow: 0 0 10px rgba(103, 232, 249, 0.4);
-  --body-grid-opacity: 0.035;
-  --body-radial-opacity: 1;
+  --heading-glow: 0 0 14px rgba(255, 138, 76, 0.12);
+  --kpi-glow: 0 0 8px rgba(255, 138, 76, 0.28);
+  --body-grid-opacity: 0.03;
+  --body-radial-opacity: 0.7;
 }
 
 /* Light palette -- a clean, bright workspace theme rather than an
@@ -66,29 +71,29 @@
 :root[data-theme="light"] {
   color-scheme: light;
 
-  --bg: #eef2f9;
-  --bg-glow-1: #dbeafe;
-  --bg-glow-2: #ede9fe;
+  --bg: #faf7f3;
+  --bg-glow-1: #ffe4d1;
+  --bg-glow-2: #ffd9c2;
 
   --surface: #ffffff;
-  --surface-2: #f3f6fb;
-  --surface-3: #e7edf6;
+  --surface-2: #f8f3ec;
+  --surface-3: #efe6d9;
 
-  --border-faint: rgba(15, 23, 42, 0.06);
-  --border-soft: rgba(15, 23, 42, 0.1);
-  --border: rgba(14, 165, 233, 0.35);
-  --border-strong: rgba(8, 145, 178, 0.55);
+  --border-faint: rgba(28, 20, 12, 0.06);
+  --border-soft: rgba(28, 20, 12, 0.1);
+  --border: rgba(234, 88, 12, 0.35);
+  --border-strong: rgba(194, 65, 12, 0.55);
 
-  --text-dim: #94a3b8;
-  --text-muted: #64748b;
-  --text-soft: #475569;
-  --text: #1e293b;
-  --text-bright: #0f172a;
+  --text-dim: #a89e90;
+  --text-muted: #78695a;
+  --text-soft: #4c4033;
+  --text: #2b2318;
+  --text-bright: #18130c;
 
-  --cyan: #0891b2;
-  --cyan-bright: #0e7490;
-  --violet: #7c3aed;
-  --magenta: #db2777;
+  --cyan: #c2410c;
+  --cyan-bright: #9a3412;
+  --violet: #9a3412;
+  --magenta: #b91c1c;
 
   --success: #059669;
   --success-strong: #047857;
@@ -97,11 +102,11 @@
   --danger: #dc2626;
   --danger-strong: #b91c1c;
 
-  --glow-cyan: 0 1px 3px rgba(15, 23, 42, 0.1);
-  --glow-cyan-lg: 0 2px 10px rgba(8, 145, 178, 0.25);
-  --glow-success: 0 1px 3px rgba(15, 23, 42, 0.08);
-  --glow-warn: 0 1px 3px rgba(15, 23, 42, 0.08);
-  --glow-danger: 0 1px 3px rgba(15, 23, 42, 0.08);
+  --glow-cyan: 0 1px 3px rgba(28, 20, 12, 0.1);
+  --glow-cyan-lg: 0 2px 10px rgba(194, 65, 12, 0.25);
+  --glow-success: 0 1px 3px rgba(28, 20, 12, 0.08);
+  --glow-warn: 0 1px 3px rgba(28, 20, 12, 0.08);
+  --glow-danger: 0 1px 3px rgba(28, 20, 12, 0.08);
 
   --heading-glow: none;
   --kpi-glow: none;
@@ -116,7 +121,7 @@
 body {
   margin: 0;
   min-height: 100vh;
-  font-family: "Rajdhani", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  font-family: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   font-size: 15px;
   color: var(--text);
   background-color: var(--bg);
@@ -131,7 +136,7 @@ body {
 }
 
 ::selection {
-  background: rgba(34, 211, 238, 0.3);
+  background: rgba(255, 90, 31, 0.3);
   color: var(--text-bright);
 }
 
@@ -150,12 +155,12 @@ body {
 }
 
 .font-display {
-  font-family: "Orbitron", "Rajdhani", system-ui, sans-serif;
-  letter-spacing: 0.04em;
+  font-family: "Space Grotesk", "Inter", system-ui, sans-serif;
+  letter-spacing: -0.01em;
 }
 
 .font-mono-neon {
-  font-family: "Share Tech Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+  font-family: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
 }
 
 @keyframes fadeInUp {
@@ -170,6 +175,60 @@ body {
 }
 .animate-page-in {
   animation: fadeInUp 0.32s ease both;
+}
+
+/* Staggered entrance: apply .stagger-children to a flex/grid container and
+   each direct child fades in slightly after the previous one, instead of
+   all at once -- the same "cascading reveal" most modern product sites use
+   for a row of stat cards. Caps at 8 children; anything past that just
+   reuses the last delay rather than growing unbounded. */
+.stagger-children > * {
+  animation: fadeInUp 0.4s ease both;
+}
+.stagger-children > *:nth-child(1) {
+  animation-delay: 0ms;
+}
+.stagger-children > *:nth-child(2) {
+  animation-delay: 60ms;
+}
+.stagger-children > *:nth-child(3) {
+  animation-delay: 120ms;
+}
+.stagger-children > *:nth-child(4) {
+  animation-delay: 180ms;
+}
+.stagger-children > *:nth-child(5) {
+  animation-delay: 240ms;
+}
+.stagger-children > *:nth-child(n + 6) {
+  animation-delay: 300ms;
+}
+
+@keyframes gradientShift {
+  0%,
+  100% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+}
+.animate-gradient-text {
+  background-size: 200% auto;
+  animation: gradientShift 4.5s ease-in-out infinite;
+}
+
+@keyframes floatY {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-6px);
+  }
+}
+.animate-float {
+  animation: floatY 5s ease-in-out infinite;
 }
 
 @keyframes neonPulse {
@@ -253,7 +312,172 @@ body {
 }
 .neon-card:hover {
   border-color: var(--border-strong) !important;
-  box-shadow: 0 0 0 1px rgba(56, 189, 248, 0.12), 0 8px 30px rgba(0, 0, 0, 0.55), 0 0 24px rgba(34, 211, 238, 0.08);
+  box-shadow: 0 0 0 1px rgba(255, 106, 26, 0.12), 0 8px 30px rgba(0, 0, 0, 0.55), 0 0 24px rgba(255, 90, 31, 0.08);
+}
+/* technical-schematic corner brackets, echoing the blueprint/diagram look */
+.neon-card::before,
+.neon-card::after {
+  content: "";
+  position: absolute;
+  width: 9px;
+  height: 9px;
+  opacity: 0.5;
+  pointer-events: none;
+  transition: opacity 0.25s ease;
+}
+.neon-card::before {
+  top: -1px;
+  left: -1px;
+  border-top: 2px solid var(--border-strong);
+  border-left: 2px solid var(--border-strong);
+}
+.neon-card::after {
+  bottom: -1px;
+  right: -1px;
+  border-bottom: 2px solid var(--border-strong);
+  border-right: 2px solid var(--border-strong);
+}
+.neon-card:hover::before,
+.neon-card:hover::after {
+  opacity: 0.9;
+}
+
+/* Purely ambient, autonomous background -- a slowly drifting HUD grid plus
+   two soft glow orbs on independent looping paths. Nothing here reacts to
+   the pointer. AppShell's own wrapper no longer paints an opaque
+   background (see layout/AppShell.tsx), so this sits genuinely BEHIND all
+   real content at a negative z-index -- no blend-mode trick needed. */
+.ambient-bg {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.ambient-grid {
+  position: absolute;
+  inset: -64px;
+  background-image: repeating-linear-gradient(
+      0deg,
+      color-mix(in srgb, var(--cyan) 7%, transparent) 0px,
+      color-mix(in srgb, var(--cyan) 7%, transparent) 1px,
+      transparent 1px,
+      transparent 64px
+    ),
+    repeating-linear-gradient(
+      90deg,
+      color-mix(in srgb, var(--cyan) 7%, transparent) 0px,
+      color-mix(in srgb, var(--cyan) 7%, transparent) 1px,
+      transparent 1px,
+      transparent 64px
+    );
+  animation: gridDrift 55s linear infinite;
+  opacity: 0.3;
+}
+
+:root[data-theme="light"] .ambient-grid {
+  opacity: 0.16;
+}
+
+.ambient-orb {
+  position: absolute;
+  width: 480px;
+  height: 480px;
+  border-radius: 999px;
+  filter: blur(100px);
+  opacity: 0.14;
+}
+
+:root[data-theme="light"] .ambient-orb {
+  opacity: 0.08;
+}
+
+.ambient-orb-1 {
+  top: -12%;
+  left: -6%;
+  background: var(--cyan);
+  animation: driftOrb1 26s ease-in-out infinite;
+}
+
+.ambient-orb-2 {
+  bottom: -18%;
+  right: -6%;
+  background: var(--violet);
+  animation: driftOrb2 32s ease-in-out infinite;
+}
+
+@keyframes driftOrb1 {
+  0%,
+  100% {
+    transform: translate(0, 0);
+  }
+  50% {
+    transform: translate(90px, 60px);
+  }
+}
+
+@keyframes driftOrb2 {
+  0%,
+  100% {
+    transform: translate(0, 0);
+  }
+  50% {
+    transform: translate(-80px, -55px);
+  }
+}
+
+/* Orbiting satellite dots -- a thin ring with a single bright point
+   travelling its circumference, classic sci-fi "system diagram" motif.
+   The ring itself rotates (not the dot independently), so the dot always
+   stays on the circle with zero extra math. */
+.ambient-orbit {
+  position: absolute;
+  border: 1px solid color-mix(in srgb, var(--cyan) 8%, transparent);
+  border-radius: 999px;
+  animation: orbitSpin linear infinite;
+}
+
+.ambient-orbit-1 {
+  width: 380px;
+  height: 380px;
+  top: 6%;
+  left: 64%;
+  animation-duration: 46s;
+}
+
+.ambient-orbit-2 {
+  width: 560px;
+  height: 560px;
+  top: 42%;
+  left: 4%;
+  animation-duration: 70s;
+  animation-direction: reverse;
+}
+
+.ambient-orbit-dot {
+  position: absolute;
+  top: -3px;
+  left: 50%;
+  width: 6px;
+  height: 6px;
+  margin-left: -3px;
+  border-radius: 999px;
+  background: var(--cyan);
+  box-shadow: var(--glow-cyan);
+}
+
+:root[data-theme="light"] .ambient-orbit {
+  border-color: color-mix(in srgb, var(--cyan) 14%, transparent);
+}
+
+@keyframes orbitSpin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .neon-dot {
@@ -283,7 +507,7 @@ body {
   background-color: var(--surface-3) !important;
 }
 .bg-slate-200 {
-  background-color: rgba(56, 189, 248, 0.16) !important;
+  background-color: rgba(255, 106, 26, 0.16) !important;
 }
 .bg-slate-900 {
   background-color: #04060c !important;
@@ -323,19 +547,19 @@ body {
 }
 
 .bg-blue-50 {
-  background-color: rgba(34, 211, 238, 0.1) !important;
+  background-color: rgba(255, 90, 31, 0.1) !important;
 }
 .bg-blue-100 {
-  background-color: rgba(34, 211, 238, 0.18) !important;
+  background-color: rgba(255, 90, 31, 0.18) !important;
 }
 .bg-blue-600 {
-  background-image: linear-gradient(135deg, #0891b2, #6d28d9) !important;
+  background-image: linear-gradient(135deg, #ff5a1f, #c2410c) !important;
   background-color: var(--cyan) !important;
   box-shadow: var(--glow-cyan);
 }
 .bg-blue-700 {
-  background-image: linear-gradient(135deg, #0e7490, #7c3aed) !important;
-  background-color: #0ea5c9 !important;
+  background-image: linear-gradient(135deg, #ff7a45, #ea580c) !important;
+  background-color: #ff7a45 !important;
 }
 .text-blue-600 {
   color: var(--cyan-bright) !important;
@@ -378,18 +602,18 @@ body {
 }
 
 .bg-red-50 {
-  background-color: rgba(255, 45, 109, 0.1) !important;
+  background-color: rgba(239, 68, 68, 0.1) !important;
 }
 .bg-red-600 {
-  background-image: linear-gradient(135deg, #db2777, #7c2d92) !important;
+  background-image: linear-gradient(135deg, #dc2626, #991b1b) !important;
   background-color: var(--danger) !important;
   box-shadow: var(--glow-danger);
 }
 .bg-red-700 {
-  background-image: linear-gradient(135deg, #be185d, #6b21a8) !important;
+  background-image: linear-gradient(135deg, #ef4444, #b91c1c) !important;
 }
 .border-red-200 {
-  border-color: rgba(255, 45, 109, 0.4) !important;
+  border-color: rgba(239, 68, 68, 0.4) !important;
 }
 .text-red-500 {
   color: var(--danger-strong) !important;
@@ -414,14 +638,14 @@ body {
    hover/focus. This is what caused hovering a table row to flash a real
    light-gray background under still-light-colored text. */
 .hover\:bg-blue-50:hover {
-  background-color: rgba(34, 211, 238, 0.1) !important;
+  background-color: rgba(255, 90, 31, 0.1) !important;
 }
 .hover\:bg-blue-700:hover {
-  background-image: linear-gradient(135deg, #0e7490, #7c3aed) !important;
-  background-color: #0ea5c9 !important;
+  background-image: linear-gradient(135deg, #ff7a45, #ea580c) !important;
+  background-color: #ff7a45 !important;
 }
 .hover\:bg-red-700:hover {
-  background-image: linear-gradient(135deg, #be185d, #6b21a8) !important;
+  background-image: linear-gradient(135deg, #ef4444, #b91c1c) !important;
 }
 .hover\:bg-slate-50:hover {
   background-color: var(--surface-2) !important;

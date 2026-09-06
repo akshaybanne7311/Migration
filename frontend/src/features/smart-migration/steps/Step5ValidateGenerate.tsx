@@ -251,7 +251,7 @@ export function Step5ValidateGenerate() {
     <div>
       <div className="mb-5">
         <div className="text-sm font-medium text-slate-800 mb-2">Selection</div>
-        <div className="flex flex-wrap gap-3">
+        <div className="stagger-children flex flex-wrap gap-3">
           <KpiCard label="VIPs selected" value={kpis?.vips ?? 0} />
           <KpiCard label="Pools" value={kpis?.pools ?? 0} />
           <KpiCard label="Pool Members" value={kpis?.pool_members ?? 0} />
@@ -265,7 +265,7 @@ export function Step5ValidateGenerate() {
           <div className="text-sm font-medium text-slate-800 mb-2">
             Migration Summary <span className="text-xs font-normal text-slate-400">— what will actually change</span>
           </div>
-          <div className="flex flex-wrap gap-3">
+          <div className="stagger-children flex flex-wrap gap-3">
             <KpiCard
               label="VIPs changed / unchanged"
               value={`${validation.summary.vips_changed} / ${validation.summary.vips_unchanged}`}
@@ -290,7 +290,7 @@ export function Step5ValidateGenerate() {
             <input
               type="radio"
               name="output-mode"
-              className="mt-1"
+              className="mt-1 accent-orange-400"
               checked={outputMode === "changes_only"}
               onChange={() => setOutputMode("changes_only")}
             />
@@ -306,7 +306,7 @@ export function Step5ValidateGenerate() {
             <input
               type="radio"
               name="output-mode"
-              className="mt-1"
+              className="mt-1 accent-orange-400"
               checked={outputMode === "full_recreate"}
               onChange={() => setOutputMode("full_recreate")}
             />

@@ -294,7 +294,12 @@ function PoolMemberExceptionEditor({ vip, pool }: { vip: Vip; pool: Pool | undef
           const checked = removeKeys.has(key);
           return (
             <label key={key} className="flex items-center gap-2 text-xs cursor-pointer">
-              <input type="checkbox" checked={checked} onChange={() => toggleRemove(key)} />
+              <input
+                type="checkbox"
+                checked={checked}
+                onChange={() => toggleRemove(key)}
+                className="accent-orange-400"
+              />
               <span className="font-mono">
                 {m.node_name}:{m.port}
               </span>

@@ -35,7 +35,7 @@ function SessionPicker() {
 
 export function AppShell({ children }: { children: ReactNode }) {
   return (
-    <div className="min-h-screen flex bg-slate-50 text-slate-900">
+    <div className="min-h-screen flex text-slate-900">
       <Sidebar />
       <div className="flex-1 flex flex-col min-w-0">
         <header className="h-14 shrink-0 border-b border-slate-200 bg-white flex items-center justify-between px-6 relative">

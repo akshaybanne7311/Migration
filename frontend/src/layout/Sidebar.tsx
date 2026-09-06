@@ -16,7 +16,7 @@ function NavGroupBlock({ label, items }: { label: string; items: { label: string
             className={({ isActive }) =>
               `relative px-3 py-1.5 rounded-md text-sm transition-all duration-200 border-l-2 ${
                 isActive
-                  ? "bg-blue-50 text-blue-700 font-medium border-l-cyan-400 shadow-[0_0_16px_rgba(34,211,238,0.15)]"
+                  ? "bg-blue-50 text-blue-700 font-medium border-l-orange-400 shadow-[0_0_16px_rgba(255,90,31,0.18)]"
                   : "text-slate-600 hover:bg-slate-100 hover:text-slate-900 border-l-transparent hover:border-l-slate-300"
               }`
             }
@@ -40,7 +40,7 @@ export function Sidebar() {
           style={{ background: "var(--cyan)", boxShadow: "var(--glow-cyan)" }}
         />
         <div>
-          <div className="font-display text-[12.5px] font-bold leading-tight tracking-tight whitespace-nowrap bg-clip-text text-transparent bg-gradient-to-r from-cyan-300 via-sky-300 to-fuchsia-400">
+          <div className="animate-gradient-text font-display text-[12.5px] font-bold leading-tight tracking-tight whitespace-nowrap bg-clip-text text-transparent bg-gradient-to-r from-amber-300 via-orange-400 to-red-500">
             CONFIG INTELLIGENCE
           </div>
           <div className="text-[11px] text-slate-400 mt-0.5 tracking-wide">Migration workspace</div>

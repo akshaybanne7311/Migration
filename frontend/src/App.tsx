@@ -1,5 +1,6 @@
 import { Route, Routes } from "react-router-dom";
 import { AppShell } from "./layout/AppShell";
+import { AmbientBackground } from "./components/AmbientBackground";
 import { DashboardPage } from "./pages/Dashboard";
 import { UploadPage } from "./pages/Upload";
 import { SessionsPage } from "./pages/Sessions";
@@ -20,7 +21,9 @@ import {
 
 export default function App() {
   return (
-    <AppShell>
+    <>
+      <AmbientBackground />
+      <AppShell>
       <Routes>
         <Route path="/" element={<DashboardPage />} />
         <Route path="/upload" element={<UploadPage />} />
@@ -38,6 +41,7 @@ export default function App() {
         <Route path="/dependencies" element={<DependenciesPage />} />
         <Route path="/compare" element={<ComparePage />} />
       </Routes>
-    </AppShell>
+      </AppShell>
+    </>
   );
 }
