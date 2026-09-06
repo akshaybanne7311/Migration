@@ -288,6 +288,30 @@ function listTd(content: React.ReactNode, mono?: boolean, key?: React.Key) {
   );
 }
 
+/** Canonical F5 GUI field slots for attached profiles, in the order the
+ * real Virtual Server Properties page shows them -- each maps to the real
+ * "ltm profile <type>" suffix that fills it. Slots not seen on any of the
+ * 9 real devices this was checked against (client-ssl, ftp, rtsp, ...)
+ * still render as their real field name with "None", exactly like the
+ * real GUI shows an empty field slot rather than hiding it. */
+const PROFILE_FIELD_SLOTS: [string, string][] = [
+  ["http", "HTTP Profile"],
+  ["http2", "HTTP/2 Profile"],
+  ["client-ssl", "SSL Profile (Client)"],
+  ["server-ssl", "SSL Profile (Server)"],
+  ["tcp", "Protocol Profile"],
+  ["udp", "Protocol Profile"],
+  ["fastl4", "Protocol Profile"],
+  ["ftp", "FTP Profile"],
+  ["rtsp", "RTSP Profile"],
+  ["sip", "SIP Profile"],
+  ["diameter", "Diameter Profile"],
+  ["dns", "DNS Profile"],
+  ["fix", "FIX Profile"],
+  ["html", "HTML Profile"],
+  ["rewrite", "Rewrite Profile"],
+];
+
 function stanzaField(json: string, key: string): string | undefined {
   try {
     const parsed = JSON.parse(json);
@@ -839,6 +863,61 @@ export function GuiPreview({
   // serverssl-use-sni).
   const vipStanza = useMemo(() => parseEntries(openVip.source_stanza_json), [openVip.source_stanza_json]);
 
+  // Real F5 GUI groups attached profiles by TYPE into named fields ("HTTP
+  // Profile", "SSL Profile (Client)", ...), not one flat list -- the type
+  // comes from the real "ltm profile <type> <name>" system_object, not a
+  // guess. Confirmed across all 9 real sessions: no VIP's profile block
+  // carries an explicit "context" key, so client/server labels below are
+  // only used where the profile TYPE itself is unambiguous (client-ssl,
+  // server-ssl); everything else is labeled by its real type name instead
+  // of a guessed side.
+  const profileTypeByName = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const o of systemObjects) {
+      if (o.object_type.startsWith("ltm profile ")) {
+        map.set(o.name, o.object_type.slice("ltm profile ".length));
+      }
+    }
+    return map;
+  }, [systemObjects]);
+
+  const profilesByType = useMemo(() => {
+    const groups = new Map<string, string[]>();
+    for (const p of openVip.profiles) {
+      const type = profileTypeByName.get(p.name) ?? "other";
+      if (!groups.has(type)) groups.set(type, []);
+      groups.get(type)!.push(p.name.replace("/Common/", ""));
+    }
+    return groups;
+  }, [openVip.profiles, profileTypeByName]);
+
+  // Collapses PROFILE_FIELD_SLOTS (some labels like "Protocol Profile"
+  // cover more than one real type) into one row per distinct GUI label,
+  // each showing every real attached profile matching that label's
+  // type(s), or "None" when the archive had nothing for that slot -- the
+  // same way the real GUI always shows the field, populated or not.
+  const profileFieldRows = useMemo(() => {
+    const labelToTypes = new Map<string, string[]>();
+    for (const [type, label] of PROFILE_FIELD_SLOTS) {
+      if (!labelToTypes.has(label)) labelToTypes.set(label, []);
+      labelToTypes.get(label)!.push(type);
+    }
+    const seenTypes = new Set(PROFILE_FIELD_SLOTS.map(([type]) => type));
+    const rows: { label: string; value: string }[] = [];
+    for (const [label, types] of labelToTypes) {
+      const names = types.flatMap((t) => profilesByType.get(t) ?? []);
+      rows.push({ label, value: names.length ? names.join(", ") : "None" });
+    }
+    const other = [...profilesByType.entries()].filter(([type]) => type !== "other" && !seenTypes.has(type));
+    for (const [type, names] of other) {
+      rows.push({ label: `Profile (${type})`, value: names.join(", ") });
+    }
+    if (profilesByType.has("other")) {
+      rows.push({ label: "Other Profiles", value: profilesByType.get("other")!.join(", ") });
+    }
+    return rows;
+  }, [profilesByType]);
+
   const monitors = useMemo(() => {
     const byName = new Map<string, Set<string>>();
     for (const p of allPools) {
@@ -1383,8 +1462,32 @@ export function GuiPreview({
                       {vipStanza["serverssl-use-sni"] !== undefined && (
                         <PropRow label="SSL Server SNI" value={entryToText(vipStanza["serverssl-use-sni"])} />
                       )}
-                      <PropRow label="Profiles" value={openVip.profiles.length ? openVip.profiles.map((p) => p.name).join(", ") : "—"} />
                       <PropRow label="Health Monitors" value={openVip.monitor_names.length ? openVip.monitor_names.map((m) => m.replace("/Common/", "")).join(", ") : "—"} />
+
+                      <SectionHeader label="Configuration: Advanced" />
+                      {profileFieldRows.map((r) => (
+                        <PropRow key={r.label} label={r.label} value={r.value} />
+                      ))}
+                      <PropRow label="Access Policy" value="None" />
+                      <PropRow label="Per-Request Policy" value="None" />
+                      <PropRow label="HTTP Compression Profile" value="None" />
+                      <PropRow label="Rate Class" value="Disabled" />
+                      <PropRow label="Bandwidth Controller Policy" value="None" />
+                      <PropRow label="DoS Protection Profile" value="Disabled" />
+                      <PropRow label="IP Intelligence" value="Disabled" />
+                      <PropRow label="Log Profile" value="None" />
+                      <PropRow label="Request Logging Profile" value="None" />
+                      <PropRow label="Connection Mirroring" value="Disabled" />
+                      <PropRow label="Mirror Pool Member Connections" value="Disabled" />
+                      <PropRow label="NAT64" value="Disabled" />
+                      <PropRow label="Last Hop Pool" value="Auto" />
+                      <tr>
+                        <td colSpan={2} className="px-3 py-1.5 text-[11px]" style={{ color: UI.textMuted, background: UI.white }}>
+                          The fields above with no attached object show TMOS's own default (not explicitly set
+                          in this device's config) -- same as how the real GUI shows every field slot whether
+                          or not it's configured.
+                        </td>
+                      </tr>
 
                       <SectionHeader label="Virtual Address Configuration" />
                       {virtualAddress ? (
