@@ -50,6 +50,14 @@ export interface SystemObject {
   entries_json: string;
 }
 
+export interface Monitor {
+  name: string;
+  monitor_type: string | null;
+  interval: number | null;
+  timeout: number | null;
+  source_stanza_json: string;
+}
+
 export interface Vip {
   name: string;
   partition: string;

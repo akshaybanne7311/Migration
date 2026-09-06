@@ -5,6 +5,7 @@ import type {
   GenerateResult,
   HealthCheckResult,
   MigrationPlan,
+  Monitor,
   NodeObj,
   Pool,
   SelectionCounts,
@@ -96,6 +97,8 @@ export const api = {
   // vlans
   listVlans: (sessionId: string) =>
     http.get<{ items: Vlan[]; total: number }>(`/sessions/${sessionId}/vlans`).then((r) => r.data),
+  listMonitors: (sessionId: string) =>
+    http.get<{ items: Monitor[]; total: number }>(`/sessions/${sessionId}/monitors`).then((r) => r.data),
   listSystemObjects: (sessionId: string) =>
     http
       .get<{ items: SystemObject[]; total: number }>(`/sessions/${sessionId}/system-objects`)

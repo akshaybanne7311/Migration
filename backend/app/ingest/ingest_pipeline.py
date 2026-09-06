@@ -6,8 +6,10 @@ table (name lookup first, address-shaped parsing as fallback), which is
 why nodes must be mapped in an earlier pass.
 """
 import dataclasses
+import json
 from typing import List, Optional
 
+from app.ingest.irules import extract_irule_scripts
 from app.ingest.parser import TmosStanza, parse_text
 from app.ingest.stanza_mappers import (
     MappingError,
@@ -18,7 +20,7 @@ from app.ingest.stanza_mappers import (
     map_vlan,
     map_virtual,
 )
-from app.models.domain import ParsedConfig
+from app.models.domain import ParsedConfig, SystemObject
 
 # Network/system-layer stanzas (from bigip_base.conf) surfaced read-only in
 # GUI Preview's Network/System sections -- everything a real device's
@@ -54,9 +56,24 @@ _SYSTEM_OBJECT_PREFIX_TYPES = (
     "sys provision",
 )
 
+# Profile and persistence-profile *definitions* (as opposed to the bare
+# name a VIP references) -- there are dozens of subtypes across a real
+# fleet (tcp, udp, http, http2, client-ssl, server-ssl, fastl4, sip, ...),
+# so this matches the whole family by prefix rather than enumerating every
+# one. Unlike the PREFIX_TYPES above these already have a real "/"-prefixed
+# object name (e.g. "ltm profile sip /Common/IMS-SIP { }"), so no name
+# recovery is needed -- object_type is kept as the full "ltm profile sip"
+# (informative: which kind of profile) rather than collapsed to "ltm profile".
+_SYSTEM_OBJECT_TYPE_FAMILIES = (
+    "ltm profile ",
+    "ltm persistence ",
+)
+
 
 def _match_system_stanza(stanza: TmosStanza) -> Optional[TmosStanza]:
     if stanza.object_type in _SYSTEM_OBJECT_EXACT_TYPES:
+        return stanza
+    if any(stanza.object_type.startswith(fam) for fam in _SYSTEM_OBJECT_TYPE_FAMILIES):
         return stanza
     for prefix in _SYSTEM_OBJECT_PREFIX_TYPES:
         if stanza.object_type == prefix:
@@ -124,5 +141,13 @@ def parse_bigip_conf(text: str) -> ParsedConfig:
         if matched is None:
             continue
         config.system_objects.append(map_system_object(matched))
+
+    # iRule bodies are opaque TCL, not TMOS key-value syntax -- extracted
+    # from the raw text directly (see irules.py) rather than from the
+    # (already-mangled) tokenized stanzas above.
+    for name, script in extract_irule_scripts(text).items():
+        config.system_objects.append(
+            SystemObject(object_type="ltm rule", name=name, entries_json=json.dumps({"script": script}))
+        )
 
     return config

@@ -102,6 +102,14 @@ export function useVlans(sessionId: string | null) {
   });
 }
 
+export function useMonitors(sessionId: string | null) {
+  return useQuery({
+    queryKey: ["session", sessionId, "monitors"],
+    queryFn: () => api.listMonitors(sessionId as string),
+    enabled: !!sessionId,
+  });
+}
+
 export function useSystemObjects(sessionId: string | null) {
   return useQuery({
     queryKey: ["session", sessionId, "system-objects"],

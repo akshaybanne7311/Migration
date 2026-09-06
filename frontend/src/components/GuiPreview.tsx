@@ -1,7 +1,7 @@
 import { Fragment, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import { api } from "../api/client";
-import type { GenerateResult, NodeObj, OutputMode, Pool, SystemObject, ValidationResult, Vip, Vlan } from "../api/types";
+import type { GenerateResult, Monitor, NodeObj, OutputMode, Pool, SystemObject, ValidationResult, Vip, Vlan } from "../api/types";
 import { toast } from "./toastStore";
 import { exportMigrationPlanToExcel } from "../utils/excelExport";
 import { exportSopDocument } from "../utils/sopExport";
@@ -346,26 +346,6 @@ function VlanListView({ vlans }: { vlans: Vlan[] }) {
   );
 }
 
-function RefListView({ label, rows }: { label: string; rows: { name: string; detail?: string; usedBy: string[] }[] }) {
-  if (rows.length === 0) return <EmptySectionNote text={`No ${label.toLowerCase()} referenced by any parsed VIP.`} />;
-  return (
-    <table className="w-full text-[13px] border-collapse">
-      <thead>
-        <tr style={{ background: "#dfe6ec" }}>{[label, "Detail", "Referenced by"].map(listTh)}</tr>
-      </thead>
-      <tbody>
-        {rows.map((r, i) => (
-          <tr key={r.name} style={{ background: i % 2 ? UI.rowAlt : "white" }}>
-            {listTd(r.name.replace("/Common/", ""))}
-            {listTd(r.detail ?? "—")}
-            {listTd(`${r.usedBy.length} VIP${r.usedBy.length === 1 ? "" : "s"}`)}
-          </tr>
-        ))}
-      </tbody>
-    </table>
-  );
-}
-
 function EmptySectionNote({ text }: { text: string }) {
   return (
     <div className="text-[13px] px-1 py-6 text-center" style={{ color: UI.textMuted }}>
@@ -405,11 +385,15 @@ function ExpandableListView<T extends { name: string }>({
   columns,
   renderCells,
   rawJson = (row) => (row as unknown as { source_stanza_json: string }).source_stanza_json,
+  renderExpanded,
 }: {
   rows: T[];
   columns: string[];
   renderCells: (row: T) => React.ReactNode[];
   rawJson?: (row: T) => string;
+  /** Overrides the default raw-JSON expand content -- e.g. an iRule's expand
+   * shows its real TCL script text, not a JSON dump of a mis-tokenized blob. */
+  renderExpanded?: (row: T) => React.ReactNode;
 }) {
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   function toggle(name: string) {
@@ -448,7 +432,11 @@ function ExpandableListView<T extends { name: string }>({
               {isOpen && (
                 <tr style={{ background: "#eef2f6" }}>
                   <td colSpan={columns.length + 1} className="px-4 py-2 border" style={{ borderColor: UI.border }}>
-                    <RawStanzaBlock label="Raw parsed config (from bigip.conf)" json={rawJson(row)} />
+                    {renderExpanded ? (
+                      renderExpanded(row)
+                    ) : (
+                      <RawStanzaBlock label="Raw parsed config (from bigip.conf)" json={rawJson(row)} />
+                    )}
                   </td>
                 </tr>
               )}
@@ -482,6 +470,10 @@ function entryToText(v: unknown): string {
 
 function objectsOfType(objects: SystemObject[], type: string): SystemObject[] {
   return objects.filter((o) => o.object_type === type);
+}
+
+function objectsOfTypePrefix(objects: SystemObject[], prefixes: string[]): SystemObject[] {
+  return objects.filter((o) => prefixes.some((p) => o.object_type.startsWith(p)));
 }
 
 function SelfIpListView({ objects }: { objects: SystemObject[] }) {
@@ -626,6 +618,102 @@ function SystemInfoView({ objects, types, emptyText }: { objects: SystemObject[]
   );
 }
 
+function MonitorListView({
+  monitors,
+  usedByMap,
+}: {
+  monitors: Monitor[];
+  usedByMap: Map<string, string[]>;
+}) {
+  if (monitors.length === 0) return <EmptySectionNote text="No health monitors were parsed from this session." />;
+  return (
+    <ExpandableListView
+      rows={monitors}
+      columns={["Name", "Type", "Interval", "Timeout", "Referenced by"]}
+      rawJson={(m) => m.source_stanza_json}
+      renderCells={(m) => {
+        const usedBy = usedByMap.get(m.name) ?? [];
+        return [
+          m.name.replace("/Common/", ""),
+          m.monitor_type ?? "—",
+          m.interval !== null ? `${m.interval}s` : "—",
+          m.timeout !== null ? `${m.timeout}s` : "—",
+          `${usedBy.length} object${usedBy.length === 1 ? "" : "s"}`,
+        ];
+      }}
+    />
+  );
+}
+
+/** Profile/persistence-profile and iRule sections show EVERY real object
+ * parsed from the config -- not just ones the currently-visible VIP set
+ * happens to reference. Confirmed on real data this matters: a device can
+ * have iRules (and profiles) sitting in its config unattached to any of
+ * the VIPs being migrated (leftover from a decommissioned VIP, shared
+ * infra, etc.) -- exactly the kind of thing a migration should surface
+ * rather than silently drop because "no VIP in this view points at it." */
+function ProfileListView({ objects, usedByMap }: { objects: SystemObject[]; usedByMap: Map<string, string[]> }) {
+  const rows = objectsOfTypePrefix(objects, ["ltm profile ", "ltm persistence "]);
+  if (rows.length === 0) return <EmptySectionNote text="No profile or persistence-profile definitions were parsed from this session." />;
+  return (
+    <ExpandableListView
+      rows={rows}
+      columns={["Profile", "Kind", "Referenced by"]}
+      rawJson={(o) => o.entries_json}
+      renderCells={(o) => {
+        const usedBy = usedByMap.get(o.name) ?? [];
+        return [
+          o.name.replace("/Common/", ""),
+          o.object_type.replace(/^ltm (profile|persistence) /, ""),
+          usedBy.length ? `${usedBy.length} VIP${usedBy.length === 1 ? "" : "s"}` : "not attached to any VIP here",
+        ];
+      }}
+      renderExpanded={(o) => (
+        <RawStanzaBlock label={`Real "${o.object_type}" definition (from bigip.conf)`} json={o.entries_json} />
+      )}
+    />
+  );
+}
+
+function IRuleListView({ objects, usedByMap }: { objects: SystemObject[]; usedByMap: Map<string, string[]> }) {
+  const rows = objectsOfType(objects, "ltm rule");
+  if (rows.length === 0) return <EmptySectionNote text="No iRules were parsed from this session." />;
+  return (
+    <ExpandableListView
+      rows={rows}
+      columns={["iRule", "Referenced by"]}
+      rawJson={(o) => o.entries_json}
+      renderCells={(o) => {
+        const usedBy = usedByMap.get(o.name) ?? [];
+        return [o.name.replace("/Common/", ""), usedBy.length ? `${usedBy.length} VIP${usedBy.length === 1 ? "" : "s"}` : "not attached to any VIP here"];
+      }}
+      renderExpanded={(o) => {
+        const script = parseEntries(o.entries_json).script as string | undefined;
+        if (!script) {
+          return (
+            <div className="text-[12px]" style={{ color: UI.textDim }}>
+              This iRule's body couldn't be extracted (malformed/truncated brace structure in the source archive).
+            </div>
+          );
+        }
+        return (
+          <details open>
+            <summary className="cursor-pointer text-[12px] select-none py-1" style={{ color: UI.link }}>
+              Real iRule script (verbatim TCL, from bigip.conf)
+            </summary>
+            <pre
+              className="text-[11px] leading-relaxed p-3 mt-1 overflow-auto max-h-96 whitespace-pre font-mono rounded"
+              style={{ background: "#0b1220", color: "#7dd3fc" }}
+            >
+              {script}
+            </pre>
+          </details>
+        );
+      }}
+    />
+  );
+}
+
 export function GuiPreview({
   vip,
   pool,
@@ -634,6 +722,7 @@ export function GuiPreview({
   allNodes = [],
   allVlans = [],
   systemObjects = [],
+  allMonitors = [],
   nodesByName,
   sessionId,
   onClose,
@@ -645,6 +734,7 @@ export function GuiPreview({
   allNodes?: NodeObj[];
   allVlans?: Vlan[];
   systemObjects?: SystemObject[];
+  allMonitors?: Monitor[];
   nodesByName: Record<string, NodeObj>;
   sessionId: string | null;
   onClose: () => void;
@@ -709,6 +799,10 @@ export function GuiPreview({
     }
     return Array.from(byName.entries()).map(([name, usedBy]) => ({ name, usedBy: Array.from(usedBy) }));
   }, [allVips]);
+
+  const monitorUsedByMap = useMemo(() => new Map(monitors.map((m) => [m.name, m.usedBy])), [monitors]);
+  const profileUsedByMap = useMemo(() => new Map(profiles.map((p) => [p.name, p.usedBy])), [profiles]);
+  const iruleUsedByMap = useMemo(() => new Map(irules.map((r) => [r.name, r.usedBy])), [irules]);
 
   function openDifferentVip(v: Vip) {
     setOpenVip(v);
@@ -1097,9 +1191,9 @@ export function GuiPreview({
                   emptyText="No traffic groups parsed from this session."
                 />
               )}
-              {section === "monitors" && <RefListView label="Monitor" rows={monitors} />}
-              {section === "profiles" && <RefListView label="Profile" rows={profiles} />}
-              {section === "irules" && <RefListView label="iRule" rows={irules} />}
+              {section === "monitors" && <MonitorListView monitors={allMonitors} usedByMap={monitorUsedByMap} />}
+              {section === "profiles" && <ProfileListView objects={systemObjects} usedByMap={profileUsedByMap} />}
+              {section === "irules" && <IRuleListView objects={systemObjects} usedByMap={iruleUsedByMap} />}
               {section === "statistics" && (
                 <EmptySectionNote text="Live statistics aren't available for a parsed configuration snapshot — this session has no traffic data, only the device's saved config." />
               )}
