@@ -1,6 +1,27 @@
+import {
+  LayoutDashboard,
+  UploadCloud,
+  FolderClock,
+  Waypoints,
+  Layers,
+  Server,
+  SlidersHorizontal,
+  MonitorSmartphone,
+  Wand2,
+  ListChecks,
+  Terminal,
+  Download,
+  Search,
+  Share2,
+  GitCompare,
+  ShieldCheck,
+  type LucideIcon,
+} from "lucide-react";
+
 export interface NavItem {
   label: string;
   path: string;
+  icon: LucideIcon;
 }
 
 export interface NavGroup {
@@ -12,36 +33,37 @@ export const navGroups: NavGroup[] = [
   {
     label: "Workspace",
     items: [
-      { label: "Dashboard", path: "/" },
-      { label: "Upload", path: "/upload" },
-      { label: "Sessions", path: "/sessions" },
+      { label: "Dashboard", path: "/", icon: LayoutDashboard },
+      { label: "Upload", path: "/upload", icon: UploadCloud },
+      { label: "Sessions", path: "/sessions", icon: FolderClock },
     ],
   },
   {
     label: "Configuration",
     items: [
-      { label: "VIPs", path: "/vips" },
-      { label: "Pools", path: "/pools" },
-      { label: "Nodes", path: "/nodes" },
-      { label: "System Config", path: "/system-config" },
-      { label: "GUI Preview", path: "/gui-preview" },
+      { label: "VIPs", path: "/vips", icon: Waypoints },
+      { label: "Pools", path: "/pools", icon: Layers },
+      { label: "Nodes", path: "/nodes", icon: Server },
+      { label: "System Config", path: "/system-config", icon: SlidersHorizontal },
+      { label: "GUI Preview", path: "/gui-preview", icon: MonitorSmartphone },
     ],
   },
   {
     label: "Migration",
     items: [
-      { label: "Smart Migration", path: "/smart-migration" },
-      { label: "Change Set", path: "/change-set" },
-      { label: "TMSH Generator", path: "/tmsh-generator" },
-      { label: "Export", path: "/export" },
+      { label: "Smart Migration", path: "/smart-migration", icon: Wand2 },
+      { label: "Change Set", path: "/change-set", icon: ListChecks },
+      { label: "TMSH Generator", path: "/tmsh-generator", icon: Terminal },
+      { label: "Export", path: "/export", icon: Download },
     ],
   },
   {
     label: "Analysis",
     items: [
-      { label: "Search", path: "/search" },
-      { label: "Dependencies", path: "/dependencies" },
-      { label: "Compare", path: "/compare" },
+      { label: "Health Check", path: "/health-check", icon: ShieldCheck },
+      { label: "Search", path: "/search", icon: Search },
+      { label: "Dependencies", path: "/dependencies", icon: Share2 },
+      { label: "Compare", path: "/compare", icon: GitCompare },
     ],
   },
 ];

@@ -3,11 +3,13 @@ import type {
   CsvImportResult,
   CsvImportType,
   GenerateResult,
+  HealthCheckResult,
   MigrationPlan,
   NodeObj,
   Pool,
   SelectionCounts,
   SessionOut,
+  SystemObject,
   Vip,
   ValidationResult,
   Vlan,
@@ -40,7 +42,12 @@ http.interceptors.response.use(
     // network drops, 5xxs — gets surfaced globally so nothing fails
     // silently off-screen from wherever the user happens to be looking.
     const isExpected404Get = error?.response?.status === 404 && error?.config?.method === "get";
-    if (!isExpected404Get) {
+    // The health check polls every 30s specifically to show a live
+    // connected/disconnected indicator -- that indicator IS the surfaced
+    // failure; toasting on top of it would repeat every 30s for as long
+    // as the backend stays down.
+    const isHealthPoll = typeof error?.config?.url === "string" && error.config.url.includes("/health");
+    if (!isExpected404Get && !isHealthPoll) {
       toast("error", extractErrorMessage(error));
     }
     return Promise.reject(error);
@@ -89,6 +96,15 @@ export const api = {
   // vlans
   listVlans: (sessionId: string) =>
     http.get<{ items: Vlan[]; total: number }>(`/sessions/${sessionId}/vlans`).then((r) => r.data),
+  listSystemObjects: (sessionId: string) =>
+    http
+      .get<{ items: SystemObject[]; total: number }>(`/sessions/${sessionId}/system-objects`)
+      .then((r) => r.data),
+
+  // health
+  health: () => http.get<{ status: string; version: string }>("/health").then((r) => r.data),
+  runHealthCheck: (sessionId: string) =>
+    http.get<HealthCheckResult>(`/sessions/${sessionId}/health-check`).then((r) => r.data),
 
   // migration plans
   createPlan: (sessionId: string, plan: MigrationPlan) =>

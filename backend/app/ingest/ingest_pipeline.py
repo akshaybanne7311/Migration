@@ -5,7 +5,8 @@ Pools resolve pool-member references against the already-populated node
 table (name lookup first, address-shaped parsing as fallback), which is
 why nodes must be mapped in an earlier pass.
 """
-from typing import List
+import dataclasses
+from typing import List, Optional
 
 from app.ingest.parser import TmosStanza, parse_text
 from app.ingest.stanza_mappers import (
@@ -13,10 +14,57 @@ from app.ingest.stanza_mappers import (
     map_monitor,
     map_node,
     map_pool,
+    map_system_object,
     map_vlan,
     map_virtual,
 )
 from app.models.domain import ParsedConfig
+
+# Network/system-layer stanzas (from bigip_base.conf) surfaced read-only in
+# GUI Preview's Network/System sections -- everything a real device's
+# Network and System admin pages would show beyond VLANs (which already
+# have their own typed model/table). These have a real (partition-prefixed)
+# object name so the parser's generic type/name split already works.
+_SYSTEM_OBJECT_EXACT_TYPES = (
+    "net self",
+    "net route",
+    "net route-domain",
+    "net dns-resolver",
+    "ltm virtual-address",
+    "cm device",
+    "cm device-group",
+    "cm traffic-group",
+    "sys global-settings",
+    "sys management-route",
+    "sys ntp",
+    "sys dns",
+    "sys snmp",
+    "sys syslog",
+)
+
+# These are named without a leading "/" (`net trunk HA-TRUNK { }`,
+# `sys management-ip 10.59.235.25/28 { }`, `sys provision ltm { }`) -- the
+# parser's type/name splitter only stops accumulating type tokens at a
+# token starting with "/", so the name ends up folded into object_type
+# (e.g. object_type becomes "net trunk HA-TRUNK", object_name ""). Matched
+# by prefix here and the real name recovered from what follows the prefix.
+_SYSTEM_OBJECT_PREFIX_TYPES = (
+    "net trunk",
+    "sys management-ip",
+    "sys provision",
+)
+
+
+def _match_system_stanza(stanza: TmosStanza) -> Optional[TmosStanza]:
+    if stanza.object_type in _SYSTEM_OBJECT_EXACT_TYPES:
+        return stanza
+    for prefix in _SYSTEM_OBJECT_PREFIX_TYPES:
+        if stanza.object_type == prefix:
+            return stanza
+        if stanza.object_type.startswith(prefix + " "):
+            recovered_name = stanza.object_type[len(prefix) :].strip()
+            return dataclasses.replace(stanza, object_type=prefix, object_name=recovered_name)
+    return None
 
 
 def parse_bigip_conf(text: str) -> ParsedConfig:
@@ -70,5 +118,11 @@ def parse_bigip_conf(text: str) -> ParsedConfig:
             config.vips[vip.name] = vip
         except MappingError as exc:
             config.warnings.append(str(exc))
+
+    for stanza in stanzas:
+        matched = _match_system_stanza(stanza)
+        if matched is None:
+            continue
+        config.system_objects.append(map_system_object(matched))
 
     return config

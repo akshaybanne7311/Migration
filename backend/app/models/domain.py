@@ -79,6 +79,18 @@ class Vip(BaseModel):
     source_stanza_json: str = "{}"
 
 
+class SystemObject(BaseModel):
+    """A network/system-layer stanza (self IP, trunk, route, route domain,
+    hostname, NTP, management IP, ...) kept as its raw parsed entries --
+    there's no dedicated typed model per stanza kind, unlike Vip/Pool/Node,
+    because these are surfaced read-only (GUI Preview's Network/System
+    sections) rather than fed into the change engine."""
+
+    object_type: str
+    name: str
+    entries_json: str = "{}"
+
+
 class ParsedConfig(BaseModel):
     """Everything extracted from one bigip.conf, before any DB write."""
 
@@ -87,4 +99,5 @@ class ParsedConfig(BaseModel):
     pools: Dict[str, Pool] = Field(default_factory=dict)
     vlans: Dict[str, Vlan] = Field(default_factory=dict)
     vips: Dict[str, Vip] = Field(default_factory=dict)
+    system_objects: List[SystemObject] = Field(default_factory=list)
     warnings: List[str] = Field(default_factory=list)

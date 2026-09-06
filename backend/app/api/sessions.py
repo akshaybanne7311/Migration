@@ -53,10 +53,20 @@ def _to_out(record: registry_db.SessionRecord) -> SessionOut:
 
 @router.post("", response_model=SessionOut)
 async def upload_session(file: UploadFile = File(...)) -> SessionOut:
+    # file.filename is client-supplied and untrusted -- a directory upload
+    # (webkitdirectory) sends folder-relative paths like "sub/dir/name.ucs",
+    # and a crafted filename could contain ".." components. Path(...).name
+    # strips any directory portion (both "/" and "\") so the on-disk write
+    # can never land outside upload_dir and never fails looking for a
+    # subdirectory that was never created.
+    safe_filename = Path(file.filename).name if file.filename else "upload.ucs"
+    if not safe_filename:
+        safe_filename = "upload.ucs"
+
     session_id = str(uuid.uuid4())
     upload_dir = settings.uploads_dir / session_id
     upload_dir.mkdir(parents=True, exist_ok=True)
-    archive_path = upload_dir / (file.filename or "upload.ucs")
+    archive_path = upload_dir / safe_filename
     contents = await file.read()
     if len(contents) > settings.max_upload_bytes:
         upload_dir.rmdir()
@@ -67,12 +77,12 @@ async def upload_session(file: UploadFile = File(...)) -> SessionOut:
         )
     archive_path.write_bytes(contents)
 
-    session_name = Path(file.filename or "session").stem
+    session_name = Path(safe_filename).stem
     db_path = session_db.session_db_path(session_id)
     registry_db.create_session(
         session_id=session_id,
         name=session_name,
-        source_filename=file.filename or "upload.ucs",
+        source_filename=safe_filename,
         original_archive_path=archive_path,
         session_db_path=db_path,
     )

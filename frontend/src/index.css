@@ -62,22 +62,41 @@
   --kpi-glow: 0 0 8px rgba(255, 138, 76, 0.28);
   --body-grid-opacity: 0.03;
   --body-radial-opacity: 0.7;
+  --card-hover-shadow: 0 8px 30px rgba(0, 0, 0, 0.55);
 }
 
-/* Light palette -- a clean, bright workspace theme rather than an
-   inverted neon (heavy glow/text-shadow reads as a rendering bug on a
-   white background, so those are toned down to near-zero here instead
-   of just flipping colors). */
+/* Light palette -- a clean, bright workspace theme. Earlier revision
+   dialed glow/opacity to near-zero on the theory that neon-on-white reads
+   as a rendering bug; in practice that made light mode feel flat and
+   lifeless next to dark mode. Kept meaningfully lower than dark mode
+   (a white surface saturates faster than near-black), but very much
+   present -- tinted card shadows, a real heading/KPI glow, livelier
+   ambient motion -- so switching to light doesn't feel like the theme
+   turned off. */
 :root[data-theme="light"] {
   color-scheme: light;
 
-  --bg: #faf7f3;
-  --bg-glow-1: #ffe4d1;
-  --bg-glow-2: #ffd9c2;
+  /* Kept very close to neutral on purpose: a visibly warm/saturated page
+     fill (the old #faf7f3/#f8f3ec/#efe6d9 trio) reads as a wash the
+     instant it fills the whole viewport, no matter how the accent glows
+     on top are tuned -- and it fights the cooler palettes (Ocean,
+     Violet) since every "white" surface would carry a peach cast
+     regardless of which palette is active. Color now lives in the
+     accent glows and surfaces stay this close to true white/gray. */
+  --bg: #f9f8f6;
+  /* Dark mode's glow colors are numerically CLOSE to its near-black base
+     (#241508 vs #121113 -- a small per-channel delta that just reads as
+     "warmer black"), which is why high alpha still looks subtle there.
+     These need the same relationship to --bg, not a saturated pastel --
+     a fully-saturated #ffe4d1 over near-white has nothing to recede
+     into and reads as a solid tinted patch at any opacity that's
+     actually visible. */
+  --bg-glow-1: #fdf0e3;
+  --bg-glow-2: #fbe9da;
 
   --surface: #ffffff;
-  --surface-2: #f8f3ec;
-  --surface-3: #efe6d9;
+  --surface-2: #f5f4f2;
+  --surface-3: #eeecea;
 
   --border-faint: rgba(28, 20, 12, 0.06);
   --border-soft: rgba(28, 20, 12, 0.1);
@@ -102,16 +121,134 @@
   --danger: #dc2626;
   --danger-strong: #b91c1c;
 
-  --glow-cyan: 0 1px 3px rgba(28, 20, 12, 0.1);
-  --glow-cyan-lg: 0 2px 10px rgba(194, 65, 12, 0.25);
-  --glow-success: 0 1px 3px rgba(28, 20, 12, 0.08);
-  --glow-warn: 0 1px 3px rgba(28, 20, 12, 0.08);
-  --glow-danger: 0 1px 3px rgba(28, 20, 12, 0.08);
+  --glow-cyan: 0 1px 3px rgba(28, 20, 12, 0.12), 0 0 10px rgba(194, 65, 12, 0.18);
+  --glow-cyan-lg: 0 6px 20px rgba(194, 65, 12, 0.2), 0 0 16px rgba(194, 65, 12, 0.16);
+  --glow-success: 0 0 10px rgba(5, 150, 105, 0.18);
+  --glow-warn: 0 0 10px rgba(180, 83, 9, 0.18);
+  --glow-danger: 0 0 10px rgba(220, 38, 38, 0.18);
 
-  --heading-glow: none;
-  --kpi-glow: none;
-  --body-grid-opacity: 0.05;
-  --body-radial-opacity: 0.5;
+  --heading-glow: 0 0 12px rgba(194, 65, 12, 0.14);
+  --kpi-glow: 0 0 8px rgba(194, 65, 12, 0.22);
+  /* Light and dark need very different magnitudes here even though both
+     read as "the accent color at N% into the page background": on a
+     near-black base, a warm blend color recedes and just warms the
+     shadows; on a near-white base the identical percentage doesn't
+     recede at all -- it paints a visible, nearly opaque pastel wash,
+     because there's no darkening effect to hide behind. Light mode's
+     value has to stay much lower than dark's for the same "subtle
+     corner glow" result instead of a flat wash across the page. */
+  --body-grid-opacity: 0.035;
+  --body-radial-opacity: 0.55;
+  /* Tighter falloff than dark mode: the same wide spread that reads as
+     ambient depth against near-black just reads as a flat pastel wash
+     against near-white (no darkness for the eye to contrast it against).
+     Containing it to real corner pools instead lets the opacity go
+     higher without the page looking tinted overall. */
+  --body-radial-spread-1: 18%;
+  --body-radial-spread-2: 16%;
+  --body-radial-spread-3: 24%;
+  --card-hover-shadow: 0 8px 24px rgba(28, 20, 12, 0.14);
+}
+
+/* ---- Additional palettes ----
+   Each swaps only the accent identity (cyan/cyan-bright/violet/magenta),
+   its derived border tint, ambient glow orbs, and shadow colors -- text,
+   surfaces and the semantic success/warn/danger colors stay constant so
+   switching palettes never reads as "did status colors just change
+   meaning." Dark and light each get their own tuned values per palette
+   rather than one being a filter over the other. */
+
+:root[data-theme="dark"][data-palette="ocean"] {
+  --cyan: #22d3ee;
+  --cyan-bright: #67e8f9;
+  --violet: #6366f1;
+  --magenta: #38bdf8;
+  --bg-glow-1: #062233;
+  --bg-glow-2: #0a1a2e;
+  --border-faint: rgba(34, 211, 238, 0.08);
+  --border-soft: rgba(34, 211, 238, 0.14);
+  --border: rgba(34, 211, 238, 0.24);
+  --border-strong: rgba(34, 211, 238, 0.42);
+  --glow-cyan: 0 0 12px rgba(34, 211, 238, 0.3), 0 0 2px rgba(34, 211, 238, 0.45);
+  --glow-cyan-lg: 0 0 28px rgba(34, 211, 238, 0.22), 0 0 5px rgba(34, 211, 238, 0.35);
+  --heading-glow: 0 0 14px rgba(103, 232, 249, 0.14);
+  --kpi-glow: 0 0 8px rgba(103, 232, 249, 0.3);
+}
+:root[data-theme="light"][data-palette="ocean"] {
+  --cyan: #0369a1;
+  --cyan-bright: #075985;
+  --violet: #4338ca;
+  --magenta: #0284c7;
+  --bg-glow-1: #eaf4fc;
+  --bg-glow-2: #ecf1fb;
+  --border: rgba(3, 105, 161, 0.35);
+  --border-strong: rgba(3, 105, 161, 0.55);
+  --glow-cyan: 0 1px 3px rgba(15, 23, 42, 0.12), 0 0 10px rgba(3, 105, 161, 0.18);
+  --glow-cyan-lg: 0 6px 20px rgba(3, 105, 161, 0.2), 0 0 16px rgba(3, 105, 161, 0.16);
+  --heading-glow: 0 0 12px rgba(3, 105, 161, 0.14);
+  --kpi-glow: 0 0 8px rgba(3, 105, 161, 0.22);
+}
+
+:root[data-theme="dark"][data-palette="violet"] {
+  --cyan: #a78bfa;
+  --cyan-bright: #c4b5fd;
+  --violet: #7c3aed;
+  --magenta: #ec4899;
+  --bg-glow-1: #1e1033;
+  --bg-glow-2: #170c28;
+  --border-faint: rgba(167, 139, 250, 0.08);
+  --border-soft: rgba(167, 139, 250, 0.14);
+  --border: rgba(167, 139, 250, 0.24);
+  --border-strong: rgba(167, 139, 250, 0.42);
+  --glow-cyan: 0 0 12px rgba(167, 139, 250, 0.3), 0 0 2px rgba(167, 139, 250, 0.45);
+  --glow-cyan-lg: 0 0 28px rgba(167, 139, 250, 0.22), 0 0 5px rgba(167, 139, 250, 0.35);
+  --heading-glow: 0 0 14px rgba(196, 181, 253, 0.14);
+  --kpi-glow: 0 0 8px rgba(196, 181, 253, 0.3);
+}
+:root[data-theme="light"][data-palette="violet"] {
+  --cyan: #7e22ce;
+  --cyan-bright: #6b21a8;
+  --violet: #a21caf;
+  --magenta: #db2777;
+  --bg-glow-1: #f6ecfc;
+  --bg-glow-2: #fbecf6;
+  --border: rgba(126, 34, 206, 0.35);
+  --border-strong: rgba(126, 34, 206, 0.55);
+  --glow-cyan: 0 1px 3px rgba(28, 12, 28, 0.12), 0 0 10px rgba(126, 34, 206, 0.18);
+  --glow-cyan-lg: 0 6px 20px rgba(126, 34, 206, 0.2), 0 0 16px rgba(126, 34, 206, 0.16);
+  --heading-glow: 0 0 12px rgba(126, 34, 206, 0.14);
+  --kpi-glow: 0 0 8px rgba(126, 34, 206, 0.22);
+}
+
+:root[data-theme="dark"][data-palette="emerald"] {
+  --cyan: #34d399;
+  --cyan-bright: #6ee7b7;
+  --violet: #0d9488;
+  --magenta: #a3e635;
+  --bg-glow-1: #052e21;
+  --bg-glow-2: #08251c;
+  --border-faint: rgba(52, 211, 153, 0.08);
+  --border-soft: rgba(52, 211, 153, 0.14);
+  --border: rgba(52, 211, 153, 0.24);
+  --border-strong: rgba(52, 211, 153, 0.42);
+  --glow-cyan: 0 0 12px rgba(52, 211, 153, 0.3), 0 0 2px rgba(52, 211, 153, 0.45);
+  --glow-cyan-lg: 0 0 28px rgba(52, 211, 153, 0.22), 0 0 5px rgba(52, 211, 153, 0.35);
+  --heading-glow: 0 0 14px rgba(110, 231, 183, 0.14);
+  --kpi-glow: 0 0 8px rgba(110, 231, 183, 0.3);
+}
+:root[data-theme="light"][data-palette="emerald"] {
+  --cyan: #047857;
+  --cyan-bright: #065f46;
+  --violet: #0f766e;
+  --magenta: #65a30d;
+  --bg-glow-1: #e7f8f0;
+  --bg-glow-2: #ecf9f2;
+  --border: rgba(4, 120, 87, 0.35);
+  --border-strong: rgba(4, 120, 87, 0.55);
+  --glow-cyan: 0 1px 3px rgba(6, 30, 22, 0.12), 0 0 10px rgba(4, 120, 87, 0.18);
+  --glow-cyan-lg: 0 6px 20px rgba(4, 120, 87, 0.2), 0 0 16px rgba(4, 120, 87, 0.16);
+  --heading-glow: 0 0 12px rgba(4, 120, 87, 0.14);
+  --kpi-glow: 0 0 8px rgba(4, 120, 87, 0.22);
 }
 
 * {
@@ -126,9 +263,9 @@ body {
   color: var(--text);
   background-color: var(--bg);
   background-image:
-    radial-gradient(circle at 8% 8%, color-mix(in srgb, var(--bg-glow-1) calc(var(--body-radial-opacity) * 100%), transparent), transparent 42%),
-    radial-gradient(circle at 92% 12%, color-mix(in srgb, var(--bg-glow-2) calc(var(--body-radial-opacity) * 100%), transparent), transparent 40%),
-    radial-gradient(circle at 50% 100%, color-mix(in srgb, var(--bg-glow-1) calc(var(--body-radial-opacity) * 80%), transparent), transparent 55%),
+    radial-gradient(circle at 8% 8%, color-mix(in srgb, var(--bg-glow-1) calc(var(--body-radial-opacity) * 100%), transparent), transparent var(--body-radial-spread-1, 30%)),
+    radial-gradient(circle at 92% 12%, color-mix(in srgb, var(--bg-glow-2) calc(var(--body-radial-opacity) * 100%), transparent), transparent var(--body-radial-spread-2, 28%)),
+    radial-gradient(circle at 50% 100%, color-mix(in srgb, var(--bg-glow-1) calc(var(--body-radial-opacity) * 80%), transparent), transparent var(--body-radial-spread-3, 40%)),
     repeating-linear-gradient(0deg, color-mix(in srgb, var(--cyan) calc(var(--body-grid-opacity) * 100%), transparent) 0px, color-mix(in srgb, var(--cyan) calc(var(--body-grid-opacity) * 100%), transparent) 1px, transparent 1px, transparent 32px),
     repeating-linear-gradient(90deg, color-mix(in srgb, var(--cyan) calc(var(--body-grid-opacity) * 100%), transparent) 0px, color-mix(in srgb, var(--cyan) calc(var(--body-grid-opacity) * 100%), transparent) 1px, transparent 1px, transparent 32px);
   background-attachment: fixed;
@@ -136,7 +273,7 @@ body {
 }
 
 ::selection {
-  background: rgba(255, 90, 31, 0.3);
+  background: color-mix(in srgb, var(--cyan) 30%, transparent);
   color: var(--text-bright);
 }
 
@@ -312,7 +449,10 @@ body {
 }
 .neon-card:hover {
   border-color: var(--border-strong) !important;
-  box-shadow: 0 0 0 1px rgba(255, 106, 26, 0.12), 0 8px 30px rgba(0, 0, 0, 0.55), 0 0 24px rgba(255, 90, 31, 0.08);
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--cyan) 12%, transparent),
+    var(--card-hover-shadow),
+    0 0 24px color-mix(in srgb, var(--cyan) 10%, transparent);
 }
 /* technical-schematic corner brackets, echoing the blueprint/diagram look */
 .neon-card::before,
@@ -390,7 +530,15 @@ body {
 }
 
 :root[data-theme="light"] .ambient-orb {
-  opacity: 0.08;
+  /* Same 480px/blur(100px) orb that reads as a contained soft nebula
+     against near-black reads as a room-filling haze against white --
+     there's no darkness for the blur to recede into, so it needs to be
+     physically smaller and less blurred, not just lower-opacity, to
+     read as a contained accent instead of a wash. */
+  width: 300px;
+  height: 300px;
+  filter: blur(60px);
+  opacity: 0.22;
 }
 
 .ambient-orb-1 {
@@ -547,19 +695,19 @@ body {
 }
 
 .bg-blue-50 {
-  background-color: rgba(255, 90, 31, 0.1) !important;
+  background-color: color-mix(in srgb, var(--cyan) 10%, transparent) !important;
 }
 .bg-blue-100 {
-  background-color: rgba(255, 90, 31, 0.18) !important;
+  background-color: color-mix(in srgb, var(--cyan) 18%, transparent) !important;
 }
 .bg-blue-600 {
-  background-image: linear-gradient(135deg, #ff5a1f, #c2410c) !important;
+  background-image: linear-gradient(135deg, var(--cyan), var(--violet)) !important;
   background-color: var(--cyan) !important;
   box-shadow: var(--glow-cyan);
 }
 .bg-blue-700 {
-  background-image: linear-gradient(135deg, #ff7a45, #ea580c) !important;
-  background-color: #ff7a45 !important;
+  background-image: linear-gradient(135deg, var(--cyan-bright), var(--cyan)) !important;
+  background-color: var(--cyan-bright) !important;
 }
 .text-blue-600 {
   color: var(--cyan-bright) !important;
@@ -638,11 +786,11 @@ body {
    hover/focus. This is what caused hovering a table row to flash a real
    light-gray background under still-light-colored text. */
 .hover\:bg-blue-50:hover {
-  background-color: rgba(255, 90, 31, 0.1) !important;
+  background-color: color-mix(in srgb, var(--cyan) 10%, transparent) !important;
 }
 .hover\:bg-blue-700:hover {
-  background-image: linear-gradient(135deg, #ff7a45, #ea580c) !important;
-  background-color: #ff7a45 !important;
+  background-image: linear-gradient(135deg, var(--cyan-bright), var(--cyan)) !important;
+  background-color: var(--cyan-bright) !important;
 }
 .hover\:bg-red-700:hover {
   background-image: linear-gradient(135deg, #ef4444, #b91c1c) !important;

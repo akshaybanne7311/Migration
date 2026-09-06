@@ -102,6 +102,14 @@ CREATE TABLE migration_plans (
     updated_at TEXT NOT NULL
 );
 
+CREATE TABLE system_objects (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    object_type TEXT NOT NULL,
+    name TEXT NOT NULL,
+    entries_json TEXT NOT NULL
+);
+CREATE INDEX idx_system_objects_type ON system_objects(object_type);
+
 CREATE TABLE ingest_warnings (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     message TEXT NOT NULL

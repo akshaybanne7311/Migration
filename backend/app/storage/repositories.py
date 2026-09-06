@@ -14,6 +14,7 @@ from app.models.domain import (
     Pool,
     PoolMember,
     Profile,
+    SystemObject,
     Vip,
     Vlan,
 )
@@ -126,6 +127,19 @@ class VlanRepository:
     def names_with_local_object(conn: sqlite3.Connection) -> List[str]:
         rows = conn.execute("SELECT name FROM vlans").fetchall()
         return [r["name"] for r in rows]
+
+
+class SystemObjectRepository:
+    @staticmethod
+    def list(conn: sqlite3.Connection) -> List[SystemObject]:
+        rows = conn.execute(
+            "SELECT object_type, name, entries_json FROM system_objects "
+            "ORDER BY object_type, name"
+        ).fetchall()
+        return [
+            SystemObject(object_type=r["object_type"], name=r["name"], entries_json=r["entries_json"])
+            for r in rows
+        ]
 
 
 def _hydrate_vip(conn: sqlite3.Connection, row: sqlite3.Row) -> Vip:

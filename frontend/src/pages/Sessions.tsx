@@ -10,22 +10,108 @@ export function SessionsPage() {
   const { currentSessionId, setCurrentSessionId } = useSessionStore();
   const queryClient = useQueryClient();
   const [pendingDelete, setPendingDelete] = useState<string | null>(null);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [bulkDeleting, setBulkDeleting] = useState(false);
+  const [pendingBulkDelete, setPendingBulkDelete] = useState(false);
 
-  async function handleDelete(id: string) {
-    const name = sessions?.find((s) => s.id === id)?.name ?? id;
+  async function deleteOne(id: string) {
     await api.deleteSession(id);
     queryClient.removeQueries({ queryKey: ["session", id] });
-    queryClient.invalidateQueries({ queryKey: ["sessions"] });
     if (currentSessionId === id) {
       setCurrentSessionId(null);
     }
+  }
+
+  async function handleDelete(id: string) {
+    const name = sessions?.find((s) => s.id === id)?.name ?? id;
+    await deleteOne(id);
+    queryClient.invalidateQueries({ queryKey: ["sessions"] });
     setPendingDelete(null);
     toast("info", `Session "${name}" deleted.`);
+  }
+
+  const failedSessions = sessions?.filter((s) => s.status === "failed") ?? [];
+
+  async function handleClearFailed() {
+    for (const s of failedSessions) {
+      await deleteOne(s.id);
+    }
+    queryClient.invalidateQueries({ queryKey: ["sessions"] });
+    toast("info", `Cleared ${failedSessions.length} failed session(s).`);
+  }
+
+  function toggleOne(id: string) {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  function toggleAll() {
+    if (!sessions) return;
+    setSelected((prev) => (prev.size === sessions.length ? new Set() : new Set(sessions.map((s) => s.id))));
+  }
+
+  async function handleBulkDelete() {
+    const ids = Array.from(selected);
+    setBulkDeleting(true);
+    try {
+      for (const id of ids) {
+        await deleteOne(id);
+      }
+      queryClient.invalidateQueries({ queryKey: ["sessions"] });
+      toast("info", `Deleted ${ids.length} session${ids.length === 1 ? "" : "s"}.`);
+      setSelected(new Set());
+    } finally {
+      setBulkDeleting(false);
+      setPendingBulkDelete(false);
+    }
   }
 
   return (
     <div>
       <PageHeader title="Sessions" subtitle="Each upload becomes an isolated session." />
+
+      {failedSessions.length > 0 && (
+        <div className="mb-3 flex items-center justify-between rounded-md border border-red-200 bg-red-50 px-4 py-2">
+          <span className="text-sm text-red-700">
+            {failedSessions.length} failed session{failedSessions.length === 1 ? "" : "s"} in this list.
+          </span>
+          <Button variant="danger" onClick={handleClearFailed}>
+            Clear failed
+          </Button>
+        </div>
+      )}
+
+      {selected.size > 0 && (
+        <div className="mb-3 flex items-center justify-between rounded-md border border-slate-200 bg-slate-50 px-4 py-2">
+          <span className="text-sm text-slate-700">
+            {selected.size} session{selected.size === 1 ? "" : "s"} selected
+          </span>
+          {pendingBulkDelete ? (
+            <span className="inline-flex items-center gap-2">
+              <span className="text-xs text-slate-500">Delete {selected.size} permanently?</span>
+              <Button variant="danger" onClick={handleBulkDelete} disabled={bulkDeleting}>
+                {bulkDeleting ? "Deleting…" : "Confirm"}
+              </Button>
+              <Button variant="ghost" onClick={() => setPendingBulkDelete(false)} disabled={bulkDeleting}>
+                Cancel
+              </Button>
+            </span>
+          ) : (
+            <div className="flex items-center gap-2">
+              <Button variant="ghost" onClick={() => setSelected(new Set())}>
+                Clear selection
+              </Button>
+              <Button variant="danger" onClick={() => setPendingBulkDelete(true)}>
+                Delete selected
+              </Button>
+            </div>
+          )}
+        </div>
+      )}
 
       {isLoading && <div className="text-sm text-slate-400">Loading…</div>}
       {!isLoading && (!sessions || sessions.length === 0) && (
@@ -37,6 +123,17 @@ export function SessionsPage() {
           <table className="w-full text-sm">
             <thead className="bg-slate-50 text-slate-500 text-xs uppercase tracking-wide">
               <tr>
+                <th className="px-4 py-2 w-8">
+                  <input
+                    type="checkbox"
+                    checked={sessions.length > 0 && selected.size === sessions.length}
+                    ref={(el) => {
+                      if (el) el.indeterminate = selected.size > 0 && selected.size < sessions.length;
+                    }}
+                    onChange={toggleAll}
+                    aria-label="Select all sessions"
+                  />
+                </th>
                 <th className="text-left px-4 py-2 font-medium">Name</th>
                 <th className="text-left px-4 py-2 font-medium">Status</th>
                 <th className="text-right px-4 py-2 font-medium">VIPs</th>
@@ -55,6 +152,14 @@ export function SessionsPage() {
                     s.id === currentSessionId ? "bg-blue-50/40" : ""
                   }`}
                 >
+                  <td className="px-4 py-2.5">
+                    <input
+                      type="checkbox"
+                      checked={selected.has(s.id)}
+                      onChange={() => toggleOne(s.id)}
+                      aria-label={`Select ${s.name}`}
+                    />
+                  </td>
                   <td className="px-4 py-2.5">
                     <div className="font-medium text-slate-800">{s.name}</div>
                     <div className="text-xs text-slate-400">{s.source_filename}</div>

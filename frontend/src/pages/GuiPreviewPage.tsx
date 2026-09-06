@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { useNodes, usePools, useValidatedSession, useVips } from "../api/queries";
+import { useNodes, usePools, useSystemObjects, useValidatedSession, useVips, useVlans } from "../api/queries";
 import type { Vip } from "../api/types";
 import { GuiPreview } from "../components/GuiPreview";
 import { VipSummaryTable } from "../components/VipSummaryTable";
@@ -11,6 +11,8 @@ export function GuiPreviewPage() {
   const { data: vipsData, isLoading } = useVips(sessionId, search);
   const { data: poolsData } = usePools(sessionId);
   const { data: nodesData } = useNodes(sessionId);
+  const { data: vlansData } = useVlans(sessionId);
+  const { data: systemObjectsData } = useSystemObjects(sessionId);
   const [openVip, setOpenVip] = useState<Vip | null>(null);
 
   const poolsByName = useMemo(
@@ -60,6 +62,10 @@ export function GuiPreviewPage() {
           vip={openVip}
           pool={openVip.pool_name ? poolsByName[openVip.pool_name] : undefined}
           allVips={vipsData?.items ?? [openVip]}
+          allPools={poolsData?.items ?? []}
+          allNodes={nodesData?.items ?? []}
+          allVlans={vlansData?.items ?? []}
+          systemObjects={systemObjectsData?.items ?? []}
           nodesByName={nodesByName}
           sessionId={sessionId}
           onClose={() => setOpenVip(null)}

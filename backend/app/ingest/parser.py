@@ -45,6 +45,17 @@ def _parse_block_body(tokens: List[Token], pos: int) -> Tuple[TmosValue, int]:
 
     while tokens[p].kind != TokenKind.RBRACE:
         first = tokens[p]
+
+        if first.kind == TokenKind.LBRACE:
+            # anonymous block as a list item, e.g. APM's
+            # `rules { { caption ... } { caption ... } }`
+            is_list = True if is_list is None else is_list
+            p += 1
+            block_val, p = _parse_block_body(tokens, p)
+            p += 1  # consume matching RBRACE
+            items.append(block_val)
+            continue
+
         if not _is_value_token(first):
             raise ParseError(
                 "unexpected token %r at line %d" % (first.value, first.line)

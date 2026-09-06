@@ -20,6 +20,13 @@
         } catch (e) {
           document.documentElement.setAttribute("data-theme", "dark");
         }
+        try {
+          var savedPalette = localStorage.getItem("f5ci-palette");
+          var palette = ["ember", "ocean", "violet", "emerald"].indexOf(savedPalette) !== -1 ? savedPalette : "ember";
+          document.documentElement.setAttribute("data-palette", palette);
+        } catch (e) {
+          document.documentElement.setAttribute("data-palette", "ember");
+        }
       })();
     </script>
   </head>

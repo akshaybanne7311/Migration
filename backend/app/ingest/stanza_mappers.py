@@ -18,7 +18,7 @@ from app.ingest.net_address import (
     strip_partition,
 )
 from app.ingest.parser import TmosStanza
-from app.models.domain import Monitor, Node, Pool, PoolMember, Profile, Vip, Vlan
+from app.models.domain import Monitor, Node, Pool, PoolMember, Profile, SystemObject, Vip, Vlan
 
 
 class MappingError(Exception):
@@ -82,6 +82,24 @@ def map_vlan(stanza: TmosStanza) -> Vlan:
         tag=_as_int(stanza.entries.get("tag")),
         interfaces=interfaces,
         source_stanza_json=json.dumps(stanza.entries, default=str),
+    )
+
+
+def map_system_object(stanza: TmosStanza) -> SystemObject:
+    """Generic mapper for network/system stanzas (self IPs, trunks, routes,
+    route domains, hostname, NTP, management IP, ...). These are surfaced
+    read-only in GUI Preview's Network/System sections rather than fed into
+    the change engine, so there's no per-kind typed model -- just the raw
+    parsed entries, same as source_stanza_json elsewhere."""
+    # object_name is genuinely empty for singleton stanzas with no name
+    # argument (`sys global-settings { }`, `sys ntp { }`, ...) -- leave it
+    # empty rather than falling back to object_type, which would make
+    # every "{type} {name}" display (SystemConfigPage, GUI Preview) print
+    # the type twice (e.g. "sys global-settings sys global-settings").
+    return SystemObject(
+        object_type=stanza.object_type,
+        name=stanza.object_name,
+        entries_json=json.dumps(stanza.entries, default=str),
     )
 
 

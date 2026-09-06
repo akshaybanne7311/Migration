@@ -40,6 +40,16 @@ export interface Vlan {
   source_stanza_json: string;
 }
 
+/** A network/system-layer object (self IP, trunk, route, route domain,
+ * hostname, NTP, management IP, ...) parsed from bigip_base.conf. Kept as
+ * raw entries rather than a typed-per-kind shape -- these are surfaced
+ * read-only in GUI Preview's Network/System sections. */
+export interface SystemObject {
+  object_type: string;
+  name: string;
+  entries_json: string;
+}
+
 export interface Vip {
   name: string;
   partition: string;
@@ -174,6 +184,11 @@ export interface ValidationResult {
   checks: ValidationCheck[];
   overall: "READY" | "BLOCKED";
   summary?: MigrationSummary | null;
+}
+
+export interface HealthCheckResult {
+  checks: ValidationCheck[];
+  overall: "CLEAN" | "MINOR_FINDINGS" | "NEEDS_ATTENTION";
 }
 
 export interface RestCall {

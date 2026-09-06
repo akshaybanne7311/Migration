@@ -1,8 +1,85 @@
-import { useState } from "react";
+import { Fragment, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import { api } from "../api/client";
-import type { NodeObj, Pool, Vip } from "../api/types";
+import type { GenerateResult, NodeObj, OutputMode, Pool, SystemObject, ValidationResult, Vip, Vlan } from "../api/types";
 import { toast } from "./toastStore";
+import { exportMigrationPlanToExcel } from "../utils/excelExport";
+import { exportSopDocument } from "../utils/sopExport";
+
+type Section =
+  | "virtual-servers"
+  | "pools"
+  | "nodes"
+  | "monitors"
+  | "profiles"
+  | "irules"
+  | "net-vlans"
+  | "net-self-ips"
+  | "net-trunks"
+  | "net-routes"
+  | "net-route-domains"
+  | "net-dns-resolvers"
+  | "sys-configuration"
+  | "sys-ntp"
+  | "sys-snmp"
+  | "sys-syslog"
+  | "sys-mgmt-routes"
+  | "sys-provisioning"
+  | "dm-devices"
+  | "dm-device-groups"
+  | "dm-traffic-groups"
+  | "statistics"
+  | "iapps";
+
+const SECTION_LABEL: Record<Section, string> = {
+  "virtual-servers": "Local Traffic » Virtual Servers » Virtual Server List",
+  pools: "Local Traffic » Pools » Pool List",
+  nodes: "Local Traffic » Nodes » Node List",
+  monitors: "Local Traffic » Monitors",
+  profiles: "Local Traffic » Profiles",
+  irules: "Local Traffic » iRules",
+  "net-vlans": "Network » VLANs",
+  "net-self-ips": "Network » Self IPs",
+  "net-trunks": "Network » Trunks",
+  "net-routes": "Network » Routes",
+  "net-route-domains": "Network » Route Domains",
+  "net-dns-resolvers": "Network » DNS Resolvers",
+  "sys-configuration": "System » Configuration » Device",
+  "sys-ntp": "System » Configuration » Device » NTP",
+  "sys-snmp": "System » Configuration » Device » SNMP",
+  "sys-syslog": "System » Configuration » Device » Syslog",
+  "sys-mgmt-routes": "System » Configuration » Device » Management Routes",
+  "sys-provisioning": "System » Resource Provisioning",
+  "dm-devices": "Device Management » Devices",
+  "dm-device-groups": "Device Management » Device Groups",
+  "dm-traffic-groups": "Device Management » Traffic Groups",
+  statistics: "Statistics",
+  iapps: "iApps",
+};
+
+const NETWORK_SUB_SECTIONS: [Section, string][] = [
+  ["net-vlans", "VLANs"],
+  ["net-self-ips", "Self IPs"],
+  ["net-trunks", "Trunks"],
+  ["net-routes", "Routes"],
+  ["net-route-domains", "Route Domains"],
+  ["net-dns-resolvers", "DNS Resolvers"],
+];
+
+const SYSTEM_SUB_SECTIONS: [Section, string][] = [
+  ["sys-configuration", "Configuration"],
+  ["sys-ntp", "NTP"],
+  ["sys-snmp", "SNMP"],
+  ["sys-syslog", "Syslog"],
+  ["sys-mgmt-routes", "Management Routes"],
+  ["sys-provisioning", "Resource Provisioning"],
+];
+
+const DEVICE_MGMT_SUB_SECTIONS: [Section, string][] = [
+  ["dm-devices", "Devices"],
+  ["dm-device-groups", "Device Groups"],
+  ["dm-traffic-groups", "Traffic Groups"],
+];
 
 /** Recreates the look of a typical device configuration console so an
  * engineer can visually sanity-check what a parsed VIP looks like in an
@@ -189,10 +266,374 @@ function VirtualServerListView({ vips, onOpen }: { vips: Vip[]; onOpen: (v: Vip)
   );
 }
 
+function listTh(label: string) {
+  return (
+    <th key={label} className="text-left px-3 py-2 font-semibold border" style={{ borderColor: UI.border, color: UI.textLabel }}>
+      {label}
+    </th>
+  );
+}
+
+function listTd(content: React.ReactNode, mono?: boolean, key?: React.Key) {
+  return (
+    <td key={key} className={`px-3 py-1.5 border ${mono ? "font-mono text-[12px]" : ""}`} style={{ borderColor: UI.border }}>
+      {content}
+    </td>
+  );
+}
+
+function stanzaField(json: string, key: string): string | undefined {
+  try {
+    const parsed = JSON.parse(json);
+    const val = parsed?.[key];
+    return typeof val === "string" ? val : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+function PoolListView({ pools }: { pools: Pool[] }) {
+  if (pools.length === 0) return <EmptySectionNote text="No pools parsed from this session." />;
+  return (
+    <ExpandableListView
+      rows={pools}
+      columns={["Status", "Name", "Members", "Monitors", "Load Balancing", "Partition"]}
+      renderCells={(p) => [
+        <>
+          <StatusDot up={p.members.some((m) => m.session_state !== "user-disabled")} />
+          {p.members.length > 0 ? "Available" : "No members"}
+        </>,
+        p.name.replace("/Common/", ""),
+        `${p.members.length} member${p.members.length === 1 ? "" : "s"}`,
+        p.monitor_names.length ? p.monitor_names.map((m) => m.replace("/Common/", "")).join(", ") : "None",
+        stanzaField(p.source_stanza_json, "load-balancing-mode") ?? "round-robin",
+        p.partition,
+      ]}
+    />
+  );
+}
+
+function NodeListView({ nodes }: { nodes: NodeObj[] }) {
+  if (nodes.length === 0) return <EmptySectionNote text="No nodes parsed from this session." />;
+  return (
+    <ExpandableListView
+      rows={nodes}
+      columns={["Status", "Name", "Address", "Family", "Used by pools", "Used by VIPs", "Partition"]}
+      renderCells={(n) => [
+        <>
+          <StatusDot up={n.state !== "user-disabled"} />
+          {n.state ?? "Enabled"}
+        </>,
+        n.name.replace("/Common/", ""),
+        n.address,
+        n.address_family.toUpperCase(),
+        n.pool_count ?? "—",
+        n.vip_count ?? "—",
+        n.partition,
+      ]}
+    />
+  );
+}
+
+function VlanListView({ vlans }: { vlans: Vlan[] }) {
+  if (vlans.length === 0) return <EmptySectionNote text="No VLANs parsed from this session." />;
+  return (
+    <ExpandableListView
+      rows={vlans}
+      columns={["Name", "Tag", "Interfaces"]}
+      renderCells={(v) => [v.name.replace("/Common/", ""), v.tag ?? "—", v.interfaces.length ? v.interfaces.join(", ") : "None"]}
+    />
+  );
+}
+
+function RefListView({ label, rows }: { label: string; rows: { name: string; detail?: string; usedBy: string[] }[] }) {
+  if (rows.length === 0) return <EmptySectionNote text={`No ${label.toLowerCase()} referenced by any parsed VIP.`} />;
+  return (
+    <table className="w-full text-[13px] border-collapse">
+      <thead>
+        <tr style={{ background: "#dfe6ec" }}>{[label, "Detail", "Referenced by"].map(listTh)}</tr>
+      </thead>
+      <tbody>
+        {rows.map((r, i) => (
+          <tr key={r.name} style={{ background: i % 2 ? UI.rowAlt : "white" }}>
+            {listTd(r.name.replace("/Common/", ""))}
+            {listTd(r.detail ?? "—")}
+            {listTd(`${r.usedBy.length} VIP${r.usedBy.length === 1 ? "" : "s"}`)}
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  );
+}
+
+function EmptySectionNote({ text }: { text: string }) {
+  return (
+    <div className="text-[13px] px-1 py-6 text-center" style={{ color: UI.textMuted }}>
+      {text}
+    </div>
+  );
+}
+
+/** Pretty-prints the exact stanza the parser read out of bigip.conf for this
+ * object -- every field the archive ever had, including anything the typed
+ * domain model (Vip/Pool/NodeObj) doesn't surface, so nothing from the
+ * source UCS/QKView is ever hidden from view. */
+function RawStanzaBlock({ label, json }: { label: string; json: string }) {
+  let pretty = json;
+  try {
+    pretty = JSON.stringify(JSON.parse(json), null, 2);
+  } catch {
+    // not valid JSON (shouldn't happen) -- fall back to showing it raw
+  }
+  return (
+    <details>
+      <summary className="cursor-pointer text-[12px] select-none py-1" style={{ color: UI.link }}>
+        {label}
+      </summary>
+      <pre
+        className="text-[11px] leading-snug p-2 mt-1 overflow-auto max-h-72 whitespace-pre-wrap break-all font-mono rounded"
+        style={{ background: "#0b1220", color: "#7dd3fc" }}
+      >
+        {pretty}
+      </pre>
+    </details>
+  );
+}
+
+function ExpandableListView<T extends { name: string }>({
+  rows,
+  columns,
+  renderCells,
+  rawJson = (row) => (row as unknown as { source_stanza_json: string }).source_stanza_json,
+}: {
+  rows: T[];
+  columns: string[];
+  renderCells: (row: T) => React.ReactNode[];
+  rawJson?: (row: T) => string;
+}) {
+  const [expanded, setExpanded] = useState<Set<string>>(new Set());
+  function toggle(name: string) {
+    setExpanded((prev) => {
+      const next = new Set(prev);
+      if (next.has(name)) next.delete(name);
+      else next.add(name);
+      return next;
+    });
+  }
+  return (
+    <table className="w-full text-[13px] border-collapse">
+      <thead>
+        <tr style={{ background: "#dfe6ec" }}>
+          {listTh("")}
+          {columns.map(listTh)}
+        </tr>
+      </thead>
+      <tbody>
+        {rows.map((row, i) => {
+          const isOpen = expanded.has(row.name);
+          const cells = renderCells(row);
+          return (
+            <Fragment key={row.name}>
+              <tr
+                style={{ background: i % 2 ? UI.rowAlt : "white", cursor: "pointer" }}
+                onClick={() => toggle(row.name)}
+              >
+                {listTd(
+                  <span style={{ display: "inline-block", transform: isOpen ? "rotate(90deg)" : undefined, color: UI.textMuted }}>
+                    ▶
+                  </span>,
+                )}
+                {cells.map((c, ci) => listTd(c, false, ci))}
+              </tr>
+              {isOpen && (
+                <tr style={{ background: "#eef2f6" }}>
+                  <td colSpan={columns.length + 1} className="px-4 py-2 border" style={{ borderColor: UI.border }}>
+                    <RawStanzaBlock label="Raw parsed config (from bigip.conf)" json={rawJson(row)} />
+                  </td>
+                </tr>
+              )}
+            </Fragment>
+          );
+        })}
+      </tbody>
+    </table>
+  );
+}
+
+function parseEntries(json: string): Record<string, unknown> {
+  try {
+    const parsed = JSON.parse(json);
+    return parsed && typeof parsed === "object" ? parsed : {};
+  } catch {
+    return {};
+  }
+}
+
+function entryToText(v: unknown): string {
+  if (v === null || v === undefined) return "—";
+  if (typeof v === "string") return v;
+  if (Array.isArray(v)) return v.length ? v.join(", ") : "—";
+  if (typeof v === "object") {
+    const keys = Object.keys(v as Record<string, unknown>);
+    return keys.length ? keys.join(", ") : "—";
+  }
+  return String(v);
+}
+
+function objectsOfType(objects: SystemObject[], type: string): SystemObject[] {
+  return objects.filter((o) => o.object_type === type);
+}
+
+function SelfIpListView({ objects }: { objects: SystemObject[] }) {
+  const rows = objectsOfType(objects, "net self");
+  if (rows.length === 0) return <EmptySectionNote text="No self IPs parsed from this session (device's own addresses on each VLAN)." />;
+  return (
+    <ExpandableListView
+      rows={rows}
+      columns={["Name", "Address", "VLAN", "Traffic Group", "Port Lockdown"]}
+      rawJson={(r) => r.entries_json}
+      renderCells={(r) => {
+        const e = parseEntries(r.entries_json);
+        return [
+          r.name.replace("/Common/", ""),
+          entryToText(e.address),
+          entryToText(e.vlan).replace("/Common/", ""),
+          entryToText(e["traffic-group"]),
+          entryToText(e["allow-service"]),
+        ];
+      }}
+    />
+  );
+}
+
+function TrunkListView({ objects }: { objects: SystemObject[] }) {
+  const rows = objectsOfType(objects, "net trunk");
+  if (rows.length === 0) return <EmptySectionNote text="No trunks parsed from this session." />;
+  return (
+    <ExpandableListView
+      rows={rows}
+      columns={["Name", "Interfaces", "LACP"]}
+      rawJson={(r) => r.entries_json}
+      renderCells={(r) => {
+        const e = parseEntries(r.entries_json);
+        return [r.name, entryToText(e.interfaces), entryToText(e.lacp) === "—" ? "disabled" : entryToText(e.lacp)];
+      }}
+    />
+  );
+}
+
+function RouteListView({ objects }: { objects: SystemObject[] }) {
+  const rows = objectsOfType(objects, "net route");
+  if (rows.length === 0) return <EmptySectionNote text="No static routes parsed from this session." />;
+  return (
+    <ExpandableListView
+      rows={rows}
+      columns={["Name", "Destination", "Gateway"]}
+      rawJson={(r) => r.entries_json}
+      renderCells={(r) => {
+        const e = parseEntries(r.entries_json);
+        return [r.name.replace("/Common/", ""), entryToText(e.network), entryToText(e.gw)];
+      }}
+    />
+  );
+}
+
+function RouteDomainListView({ objects }: { objects: SystemObject[] }) {
+  const rows = objectsOfType(objects, "net route-domain");
+  if (rows.length === 0) return <EmptySectionNote text="No route domains parsed from this session." />;
+  return (
+    <ExpandableListView
+      rows={rows}
+      columns={["Name", "ID", "VLANs"]}
+      rawJson={(r) => r.entries_json}
+      renderCells={(r) => {
+        const e = parseEntries(r.entries_json);
+        return [r.name.replace("/Common/", ""), entryToText(e.id), entryToText(e.vlans)];
+      }}
+    />
+  );
+}
+
+function ManagementRouteListView({ objects }: { objects: SystemObject[] }) {
+  const rows = objectsOfType(objects, "sys management-route");
+  if (rows.length === 0) return <EmptySectionNote text="No management routes parsed from this session." />;
+  return (
+    <ExpandableListView
+      rows={rows}
+      columns={["Name", "Network", "Gateway"]}
+      rawJson={(r) => r.entries_json}
+      renderCells={(r) => {
+        const e = parseEntries(r.entries_json);
+        return [r.name.replace("/Common/", ""), entryToText(e.network), entryToText(e.gateway)];
+      }}
+    />
+  );
+}
+
+function DnsResolverListView({ objects }: { objects: SystemObject[] }) {
+  const rows = objectsOfType(objects, "net dns-resolver");
+  if (rows.length === 0) return <EmptySectionNote text="No DNS resolvers parsed from this session." />;
+  return (
+    <ExpandableListView
+      rows={rows}
+      columns={["Name", "Forward Zones"]}
+      rawJson={(r) => r.entries_json}
+      renderCells={(r) => {
+        const e = parseEntries(r.entries_json);
+        const zones = e["forward-zones"];
+        const zoneNames = zones && typeof zones === "object" ? Object.keys(zones as Record<string, unknown>) : [];
+        return [r.name.replace("/Common/", ""), zoneNames.length ? zoneNames.join(", ") : "—"];
+      }}
+    />
+  );
+}
+
+/** Single-instance system settings (hostname, NTP, SNMP, syslog, ...) shown
+ * as a key/value properties table -- there's exactly one of these per
+ * device, unlike self IPs/trunks/routes which are lists. */
+function SystemInfoView({ objects, types, emptyText }: { objects: SystemObject[]; types: string[]; emptyText: string }) {
+  const matches = objects.filter((o) => types.includes(o.object_type));
+  if (matches.length === 0) return <EmptySectionNote text={emptyText} />;
+  return (
+    <>
+      {matches.map((obj) => {
+        const entries = parseEntries(obj.entries_json);
+        const keys = Object.keys(entries);
+        return (
+          <table key={`${obj.object_type}:${obj.name}`} className="w-full border-collapse mb-4" style={{ border: `1px solid ${UI.border}` }}>
+            <tbody>
+              <SectionHeader label={obj.name ? `${obj.object_type} ${obj.name}` : obj.object_type} />
+              {keys.length === 0 && (
+                <tr>
+                  <td colSpan={2} className="px-3 py-2 text-[13px]" style={{ color: UI.textMuted }}>
+                    No additional fields parsed for this object.
+                  </td>
+                </tr>
+              )}
+              {keys.map((k) => (
+                <PropRow key={k} label={k} value={entryToText(entries[k])} />
+              ))}
+              <tr>
+                <td colSpan={2} className="px-3 py-2" style={{ background: UI.white }}>
+                  <RawStanzaBlock label="Raw parsed config (from bigip.conf)" json={obj.entries_json} />
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        );
+      })}
+    </>
+  );
+}
+
 export function GuiPreview({
   vip,
   pool,
   allVips,
+  allPools = [],
+  allNodes = [],
+  allVlans = [],
+  systemObjects = [],
   nodesByName,
   sessionId,
   onClose,
@@ -200,20 +641,81 @@ export function GuiPreview({
   vip: Vip;
   pool: Pool | undefined;
   allVips: Vip[];
+  allPools?: Pool[];
+  allNodes?: NodeObj[];
+  allVlans?: Vlan[];
+  systemObjects?: SystemObject[];
   nodesByName: Record<string, NodeObj>;
   sessionId: string | null;
   onClose: () => void;
 }) {
   const [view, setView] = useState<"properties" | "list">("properties");
+  const [section, setSection] = useState<Section>("virtual-servers");
   const [openVip, setOpenVip] = useState(vip);
   const [fields, setFields] = useState<EditableFields>(() => fieldsFromVip(vip));
   const [busy, setBusy] = useState(false);
   const [tmsh, setTmsh] = useState<string | null>(null);
+  const [outputMode, setOutputMode] = useState<OutputMode>("changes_only");
+  const [validation, setValidation] = useState<ValidationResult | null>(null);
+  const [generated, setGenerated] = useState<GenerateResult | null>(null);
+  const [exporting, setExporting] = useState<"excel" | "sop" | null>(null);
+
+  const virtualAddress = useMemo(() => {
+    const match = systemObjects.find(
+      (o) => o.object_type === "ltm virtual-address" && parseEntries(o.entries_json).address === openVip.destination_address,
+    );
+    return match ? parseEntries(match.entries_json) : null;
+  }, [systemObjects, openVip.destination_address]);
+
+  const monitors = useMemo(() => {
+    const byName = new Map<string, Set<string>>();
+    for (const p of allPools) {
+      for (const m of p.monitor_names) {
+        if (!byName.has(m)) byName.set(m, new Set());
+        byName.get(m)!.add(p.name);
+      }
+    }
+    for (const v of allVips) {
+      for (const m of v.monitor_names) {
+        if (!byName.has(m)) byName.set(m, new Set());
+        byName.get(m)!.add(v.name);
+      }
+    }
+    return Array.from(byName.entries()).map(([name, usedBy]) => ({ name, usedBy: Array.from(usedBy) }));
+  }, [allPools, allVips]);
+
+  const profiles = useMemo(() => {
+    const byName = new Map<string, { context: string | null; usedBy: Set<string> }>();
+    for (const v of allVips) {
+      for (const p of v.profiles) {
+        if (!byName.has(p.name)) byName.set(p.name, { context: p.context, usedBy: new Set() });
+        byName.get(p.name)!.usedBy.add(v.name);
+      }
+    }
+    return Array.from(byName.entries()).map(([name, { context, usedBy }]) => ({
+      name,
+      detail: context ?? undefined,
+      usedBy: Array.from(usedBy),
+    }));
+  }, [allVips]);
+
+  const irules = useMemo(() => {
+    const byName = new Map<string, Set<string>>();
+    for (const v of allVips) {
+      for (const r of v.irules) {
+        if (!byName.has(r)) byName.set(r, new Set());
+        byName.get(r)!.add(v.name);
+      }
+    }
+    return Array.from(byName.entries()).map(([name, usedBy]) => ({ name, usedBy: Array.from(usedBy) }));
+  }, [allVips]);
 
   function openDifferentVip(v: Vip) {
     setOpenVip(v);
     setFields(fieldsFromVip(v));
     setTmsh(null);
+    setValidation(null);
+    setGenerated(null);
     setView("properties");
   }
 
@@ -235,6 +737,8 @@ export function GuiPreview({
     }
     setBusy(true);
     setTmsh(null);
+    setValidation(null);
+    setGenerated(null);
     try {
       const commonChanges = [];
       if (dirty.name) {
@@ -270,24 +774,67 @@ export function GuiPreview({
         pool_member_edits: [],
         exceptions: [],
         create_network_objects: false,
-        output_mode: "changes_only" as const,
+        output_mode: outputMode,
       };
 
       const created = await api.createPlan(sessionId, plan);
-      const validation = await api.validatePlan(sessionId, created.id);
-      if (validation.overall === "BLOCKED") {
+      const validationResult = await api.validatePlan(sessionId, created.id);
+      setValidation(validationResult);
+      if (validationResult.overall === "BLOCKED") {
         setTmsh(
-          "// Validation BLOCKED:\n" + validation.checks.filter((c) => c.severity === "blocked").map((c) => `// - ${c.label}: ${c.details}`).join("\n"),
+          "// Validation BLOCKED:\n" + validationResult.checks.filter((c) => c.severity === "blocked").map((c) => `// - ${c.label}: ${c.details}`).join("\n"),
         );
         return;
       }
       const result = await api.generatePlan(sessionId, created.id);
+      setGenerated(result);
       setTmsh(result.tmsh || "// No TMSH produced for this edit.");
-      toast("success", "TMSH computed for your edits.");
+      toast(
+        "success",
+        outputMode === "full_recreate" ? "Full TMSH deployment script computed." : "TMSH computed for your edits.",
+      );
     } catch (e) {
       toast("error", e instanceof Error ? e.message : "Could not compute TMSH for these changes");
     } finally {
       setBusy(false);
+    }
+  }
+
+  async function handleExportExcel() {
+    setExporting("excel");
+    try {
+      await exportMigrationPlanToExcel({
+        sessionName: openVip.name,
+        selectedVips: [openVip],
+        kpis: undefined,
+        validation,
+        generated,
+        outputMode,
+      });
+      toast("success", "Excel workbook downloaded.");
+    } catch (e) {
+      toast("error", e instanceof Error ? e.message : "Excel export failed");
+    } finally {
+      setExporting(null);
+    }
+  }
+
+  async function handleExportSop() {
+    setExporting("sop");
+    try {
+      await exportSopDocument({
+        sessionName: openVip.name,
+        selectedVips: [openVip],
+        kpis: undefined,
+        validation,
+        generated,
+        outputMode,
+      });
+      toast("success", "SOP document downloaded.");
+    } catch (e) {
+      toast("error", e instanceof Error ? e.message : "SOP export failed");
+    } finally {
+      setExporting(null);
     }
   }
 
@@ -311,7 +858,17 @@ export function GuiPreview({
             className="ml-3 flex-1 text-[11px] rounded px-2 py-0.5 font-mono truncate"
             style={{ color: UI.textLabel, background: UI.white }}
           >
-            https://&lt;device-host&gt;/config/network/virtual-servers/{view === "properties" ? "properties" : "list"}
+            https://&lt;device-host&gt;/config/
+            {section.startsWith("net-")
+              ? section.replace("net-", "network/")
+              : section.startsWith("sys-")
+                ? section.replace("sys-", "system/")
+                : section.startsWith("dm-")
+                  ? section.replace("dm-", "device-management/")
+                  : section === "statistics" || section === "iapps"
+                    ? section
+                    : `local-traffic/${section}`}
+            {section === "virtual-servers" ? `/${view === "properties" ? "properties" : "list"}` : ""}
           </span>
           <button onClick={onClose} className="text-sm px-2" style={{ color: UI.textLabel }}>
             ×
@@ -335,29 +892,125 @@ export function GuiPreview({
         <div className="flex flex-1 min-h-0">
           {/* left nav */}
           <div className="w-48 shrink-0 text-[13px] py-2 overflow-y-auto" style={{ background: UI.navy }}>
-            {["Statistics", "iApps", "Local Traffic", "Network", "System"].map((item) => (
-              <div key={item}>
-                <div
-                  className="px-3 py-1.5 text-slate-200"
-                  style={item === "Local Traffic" ? { background: UI.navyActive, color: "white", fontWeight: 600 } : undefined}
-                >
-                  {item}
-                </div>
-                {item === "Local Traffic" && (
-                  <div className="pl-4 pb-1">
-                    {["Virtual Servers", "Pools", "Nodes", "Monitors", "Profiles", "iRules"].map((sub) => (
-                      <div
-                        key={sub}
-                        className="px-2 py-1 text-slate-300 text-[12px] cursor-pointer hover:text-white"
-                        style={sub === "Virtual Servers" ? { color: "white", fontWeight: 600 } : undefined}
-                      >
-                        {sub}
-                      </div>
-                    ))}
-                  </div>
-                )}
+            <div
+              className="px-3 py-1.5 text-slate-200 cursor-pointer hover:text-white"
+              onClick={() => setSection("statistics")}
+              style={section === "statistics" ? { background: UI.navyActive, color: "white", fontWeight: 600 } : undefined}
+            >
+              Statistics
+            </div>
+            <div
+              className="px-3 py-1.5 text-slate-200 cursor-pointer hover:text-white"
+              onClick={() => setSection("iapps")}
+              style={section === "iapps" ? { background: UI.navyActive, color: "white", fontWeight: 600 } : undefined}
+            >
+              iApps
+            </div>
+            <div>
+              <div
+                className="px-3 py-1.5 text-slate-200"
+                style={
+                  ["virtual-servers", "pools", "nodes", "monitors", "profiles", "irules"].includes(section)
+                    ? { background: UI.navyActive, color: "white", fontWeight: 600 }
+                    : undefined
+                }
+              >
+                Local Traffic
               </div>
-            ))}
+              <div className="pl-4 pb-1">
+                {(
+                  [
+                    ["virtual-servers", "Virtual Servers"],
+                    ["pools", "Pools"],
+                    ["nodes", "Nodes"],
+                    ["monitors", "Monitors"],
+                    ["profiles", "Profiles"],
+                    ["irules", "iRules"],
+                  ] as [Section, string][]
+                ).map(([key, label]) => (
+                  <div
+                    key={key}
+                    onClick={() => setSection(key)}
+                    className="px-2 py-1 text-slate-300 text-[12px] cursor-pointer hover:text-white"
+                    style={section === key ? { color: "white", fontWeight: 600 } : undefined}
+                  >
+                    {label}
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div>
+              <div
+                className="px-3 py-1.5 text-slate-200"
+                style={
+                  NETWORK_SUB_SECTIONS.some(([key]) => key === section)
+                    ? { background: UI.navyActive, color: "white", fontWeight: 600 }
+                    : undefined
+                }
+              >
+                Network
+              </div>
+              <div className="pl-4 pb-1">
+                {NETWORK_SUB_SECTIONS.map(([key, label]) => (
+                  <div
+                    key={key}
+                    onClick={() => setSection(key)}
+                    className="px-2 py-1 text-slate-300 text-[12px] cursor-pointer hover:text-white"
+                    style={section === key ? { color: "white", fontWeight: 600 } : undefined}
+                  >
+                    {label}
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div>
+              <div
+                className="px-3 py-1.5 text-slate-200"
+                style={
+                  SYSTEM_SUB_SECTIONS.some(([key]) => key === section)
+                    ? { background: UI.navyActive, color: "white", fontWeight: 600 }
+                    : undefined
+                }
+              >
+                System
+              </div>
+              <div className="pl-4 pb-1">
+                {SYSTEM_SUB_SECTIONS.map(([key, label]) => (
+                  <div
+                    key={key}
+                    onClick={() => setSection(key)}
+                    className="px-2 py-1 text-slate-300 text-[12px] cursor-pointer hover:text-white"
+                    style={section === key ? { color: "white", fontWeight: 600 } : undefined}
+                  >
+                    {label}
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div>
+              <div
+                className="px-3 py-1.5 text-slate-200"
+                style={
+                  DEVICE_MGMT_SUB_SECTIONS.some(([key]) => key === section)
+                    ? { background: UI.navyActive, color: "white", fontWeight: 600 }
+                    : undefined
+                }
+              >
+                Device Management
+              </div>
+              <div className="pl-4 pb-1">
+                {DEVICE_MGMT_SUB_SECTIONS.map(([key, label]) => (
+                  <div
+                    key={key}
+                    onClick={() => setSection(key)}
+                    className="px-2 py-1 text-slate-300 text-[12px] cursor-pointer hover:text-white"
+                    style={section === key ? { color: "white", fontWeight: 600 } : undefined}
+                  >
+                    {label}
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
 
           {/* content */}
@@ -366,8 +1019,8 @@ export function GuiPreview({
               className="px-4 py-2 text-[12px]"
               style={{ background: UI.breadcrumb, borderBottom: `1px solid ${UI.border}`, color: UI.textLabel }}
             >
-              Local Traffic » Virtual Servers » Virtual Server List
-              {view === "properties" && (
+              {SECTION_LABEL[section]}
+              {section === "virtual-servers" && view === "properties" && (
                 <>
                   {" » "}
                   <span className="font-medium" style={{ color: UI.textValue }}>
@@ -376,24 +1029,84 @@ export function GuiPreview({
                 </>
               )}
             </div>
-            <div className="flex gap-4 px-4 pt-2 text-[13px]" style={{ borderBottom: `1px solid ${UI.border}` }}>
-              <button
-                onClick={() => setView("list")}
-                className="pb-2 px-1"
-                style={view === "list" ? { borderBottom: `2px solid ${UI.navyActive}`, color: UI.navyActive, fontWeight: 600 } : { color: "#64748b" }}
-              >
-                Virtual Server List
-              </button>
-              <button
-                onClick={() => setView("properties")}
-                className="pb-2 px-1"
-                style={view === "properties" ? { borderBottom: `2px solid ${UI.navyActive}`, color: UI.navyActive, fontWeight: 600 } : { color: "#64748b" }}
-              >
-                Properties
-              </button>
-            </div>
+            {section === "virtual-servers" && (
+              <div className="flex gap-4 px-4 pt-2 text-[13px]" style={{ borderBottom: `1px solid ${UI.border}` }}>
+                <button
+                  onClick={() => setView("list")}
+                  className="pb-2 px-1"
+                  style={view === "list" ? { borderBottom: `2px solid ${UI.navyActive}`, color: UI.navyActive, fontWeight: 600 } : { color: "#64748b" }}
+                >
+                  Virtual Server List
+                </button>
+                <button
+                  onClick={() => setView("properties")}
+                  className="pb-2 px-1"
+                  style={view === "properties" ? { borderBottom: `2px solid ${UI.navyActive}`, color: UI.navyActive, fontWeight: 600 } : { color: "#64748b" }}
+                >
+                  Properties
+                </button>
+              </div>
+            )}
             <div className="flex-1 overflow-auto p-4" style={{ background: "#f7f9fa" }}>
-              {view === "list" ? (
+              {section === "pools" && <PoolListView pools={allPools} />}
+              {section === "nodes" && <NodeListView nodes={allNodes} />}
+              {section === "net-vlans" && <VlanListView vlans={allVlans} />}
+              {section === "net-self-ips" && <SelfIpListView objects={systemObjects} />}
+              {section === "net-trunks" && <TrunkListView objects={systemObjects} />}
+              {section === "net-routes" && <RouteListView objects={systemObjects} />}
+              {section === "net-route-domains" && <RouteDomainListView objects={systemObjects} />}
+              {section === "net-dns-resolvers" && <DnsResolverListView objects={systemObjects} />}
+              {section === "sys-configuration" && (
+                <SystemInfoView
+                  objects={systemObjects}
+                  types={["sys global-settings", "sys management-ip"]}
+                  emptyText="No device configuration (hostname, management IP) parsed from this session."
+                />
+              )}
+              {section === "sys-ntp" && (
+                <SystemInfoView objects={systemObjects} types={["sys ntp"]} emptyText="No NTP configuration parsed from this session." />
+              )}
+              {section === "sys-snmp" && (
+                <SystemInfoView objects={systemObjects} types={["sys snmp"]} emptyText="No SNMP configuration parsed from this session." />
+              )}
+              {section === "sys-syslog" && (
+                <SystemInfoView objects={systemObjects} types={["sys syslog"]} emptyText="No syslog configuration parsed from this session." />
+              )}
+              {section === "sys-mgmt-routes" && <ManagementRouteListView objects={systemObjects} />}
+              {section === "sys-provisioning" && (
+                <SystemInfoView
+                  objects={systemObjects}
+                  types={["sys provision"]}
+                  emptyText="No provisioned module info parsed from this session."
+                />
+              )}
+              {section === "dm-devices" && (
+                <SystemInfoView objects={systemObjects} types={["cm device"]} emptyText="No device identity info parsed from this session." />
+              )}
+              {section === "dm-device-groups" && (
+                <SystemInfoView
+                  objects={systemObjects}
+                  types={["cm device-group"]}
+                  emptyText="No device (HA/sync) groups parsed from this session."
+                />
+              )}
+              {section === "dm-traffic-groups" && (
+                <SystemInfoView
+                  objects={systemObjects}
+                  types={["cm traffic-group"]}
+                  emptyText="No traffic groups parsed from this session."
+                />
+              )}
+              {section === "monitors" && <RefListView label="Monitor" rows={monitors} />}
+              {section === "profiles" && <RefListView label="Profile" rows={profiles} />}
+              {section === "irules" && <RefListView label="iRule" rows={irules} />}
+              {section === "statistics" && (
+                <EmptySectionNote text="Live statistics aren't available for a parsed configuration snapshot — this session has no traffic data, only the device's saved config." />
+              )}
+              {section === "iapps" && (
+                <EmptySectionNote text="iApp templates aren't parsed from UCS/QKView archives in this tool." />
+              )}
+              {section === "virtual-servers" && (view === "list" ? (
                 <VirtualServerListView vips={allVips} onOpen={openDifferentVip} />
               ) : (
                 <>
@@ -429,14 +1142,31 @@ export function GuiPreview({
 
                       <SectionHeader label="Configuration: Basic" />
                       <PropRow label="Protocol" value={(openVip.ip_protocol ?? "tcp").toUpperCase()} />
+                      <PropRow label="Address Family" value={openVip.address_family.toUpperCase()} />
+                      <PropRow label="Route Domain" value={openVip.route_domain !== null ? `%${openVip.route_domain}` : "—"} />
+                      <PropRow label="Netmask" value={openVip.mask ?? "—"} />
                       <EditableRow
                         label="VLAN"
                         value={fields.vlan.replace("/Common/", "")}
                         dirty={dirty.vlan}
                         onChange={(v) => setFields((f) => ({ ...f, vlan: v.startsWith("/") ? v : `/Common/${v}` }))}
                       />
+                      <PropRow label="VLAN Traffic" value={openVip.vlans_enabled ? "Enabled on" : "Disabled on"} />
                       <PropRow label="Source Address Translation" value={openVip.snat_type ?? "None"} />
                       <PropRow label="Profiles" value={openVip.profiles.length ? openVip.profiles.map((p) => p.name).join(", ") : "—"} />
+                      <PropRow label="Health Monitors" value={openVip.monitor_names.length ? openVip.monitor_names.map((m) => m.replace("/Common/", "")).join(", ") : "—"} />
+
+                      <SectionHeader label="Virtual Address Configuration" />
+                      {virtualAddress ? (
+                        <>
+                          <PropRow label="ARP" value={entryToText(virtualAddress.arp)} />
+                          <PropRow label="ICMP Echo" value={entryToText(virtualAddress["icmp-echo"])} />
+                          <PropRow label="Route Advertisement" value={entryToText(virtualAddress["route-advertisement"])} />
+                          <PropRow label="Traffic Group" value={entryToText(virtualAddress["traffic-group"]).replace("/Common/", "")} />
+                        </>
+                      ) : (
+                        <PropRow label="Virtual Address" value="No matching ltm virtual-address object parsed for this destination." />
+                      )}
 
                       <SectionHeader label="Resources" />
                       <PropRow label="iRules" value={openVip.irules.length ? openVip.irules.map((r) => r.replace("/Common/", "")).join(", ") : "None"} />
@@ -465,6 +1195,7 @@ export function GuiPreview({
                                     <th className="text-left px-3 py-1.5 border" style={{ borderColor: UI.border }}>Member</th>
                                     <th className="text-left px-3 py-1.5 border" style={{ borderColor: UI.border }}>Address</th>
                                     <th className="text-left px-3 py-1.5 border" style={{ borderColor: UI.border }}>Port</th>
+                                    <th className="text-left px-3 py-1.5 border" style={{ borderColor: UI.border }}>Connection Limit</th>
                                   </tr>
                                 </thead>
                                 <tbody>
@@ -479,25 +1210,56 @@ export function GuiPreview({
                                         {nodesByName[m.node_name]?.address ?? "—"}
                                       </td>
                                       <td className="px-3 py-1.5 border" style={{ borderColor: UI.border }}>{m.port}</td>
+                                      <td className="px-3 py-1.5 border" style={{ borderColor: UI.border }}>{m.connection_limit ?? "0 (unlimited)"}</td>
                                     </tr>
                                   ))}
                                 </tbody>
                               </table>
                             </td>
                           </tr>
+                          <tr>
+                            <td colSpan={2} className="px-3 py-2" style={{ background: UI.white }}>
+                              <RawStanzaBlock label="Raw parsed pool config (from bigip.conf)" json={pool.source_stanza_json} />
+                            </td>
+                          </tr>
                         </>
                       )}
+
+                      <tr>
+                        <td colSpan={2} className="px-3 py-2" style={{ background: UI.white, borderTop: `1px solid ${UI.border}` }}>
+                          <RawStanzaBlock label="Raw parsed VIP config (from bigip.conf) — every field the archive had for this object" json={openVip.source_stanza_json} />
+                        </td>
+                      </tr>
                     </tbody>
                   </table>
 
-                  <div className="mt-4 flex items-center gap-2">
+                  <div className="mt-4 flex items-center gap-4 text-[12px]" style={{ color: UI.textLabel }}>
+                    <label className="flex items-center gap-1.5 cursor-pointer">
+                      <input
+                        type="radio"
+                        checked={outputMode === "changes_only"}
+                        onChange={() => setOutputMode("changes_only")}
+                      />
+                      Apply changes only
+                    </label>
+                    <label className="flex items-center gap-1.5 cursor-pointer">
+                      <input
+                        type="radio"
+                        checked={outputMode === "full_recreate"}
+                        onChange={() => setOutputMode("full_recreate")}
+                      />
+                      Full recreate (whole TMSH for a new deployment)
+                    </label>
+                  </div>
+
+                  <div className="mt-2 flex items-center gap-2">
                     <button
                       onClick={handlePreviewTmsh}
-                      disabled={!hasChanges || busy}
+                      disabled={(outputMode === "changes_only" && !hasChanges) || busy}
                       className="px-4 py-1.5 text-[13px] text-white rounded disabled:opacity-40 disabled:cursor-not-allowed"
                       style={{ background: UI.navyActive }}
                     >
-                      {busy ? "Computing…" : "Update"}
+                      {busy ? "Computing…" : outputMode === "full_recreate" ? "Generate full TMSH" : "Update"}
                     </button>
                     <button
                       className="px-4 py-1.5 text-[13px] border rounded"
@@ -505,9 +1267,14 @@ export function GuiPreview({
                     >
                       Delete
                     </button>
-                    {hasChanges && !busy && (
+                    {!busy && outputMode === "changes_only" && hasChanges && (
                       <span className="text-[12px]" style={{ color: UI.textLabel }}>
                         Click Update to compute the real TMSH command for the field(s) you changed.
+                      </span>
+                    )}
+                    {!busy && outputMode === "full_recreate" && (
+                      <span className="text-[12px]" style={{ color: UI.textLabel }}>
+                        Generates the complete tmsh create commands for this VIP (plus any edits above) — ready to run against a fresh device.
                       </span>
                     )}
                   </div>
@@ -527,8 +1294,32 @@ export function GuiPreview({
                       </pre>
                     </div>
                   )}
+
+                  {generated && (
+                    <div className="mt-3 flex items-center gap-2">
+                      <button
+                        onClick={handleExportExcel}
+                        disabled={exporting !== null}
+                        className="px-3 py-1.5 text-[12px] border rounded disabled:opacity-40 disabled:cursor-not-allowed"
+                        style={{ borderColor: UI.border, color: UI.textLabel }}
+                      >
+                        {exporting === "excel" ? "Exporting…" : "Export to Excel"}
+                      </button>
+                      <button
+                        onClick={handleExportSop}
+                        disabled={exporting !== null}
+                        className="px-3 py-1.5 text-[12px] border rounded disabled:opacity-40 disabled:cursor-not-allowed"
+                        style={{ borderColor: UI.border, color: UI.textLabel }}
+                      >
+                        {exporting === "sop" ? "Exporting…" : "Download SOP (.docx)"}
+                      </button>
+                      <span className="text-[11px]" style={{ color: UI.textDim }}>
+                        Step-by-step, numbered TMSH — same export used by the Smart Migration wizard.
+                      </span>
+                    </div>
+                  )}
                 </>
-              )}
+              ))}
             </div>
           </div>
         </div>

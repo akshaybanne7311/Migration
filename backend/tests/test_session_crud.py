@@ -26,6 +26,25 @@ def test_create_list_get_session(client, synthetic_ucs_path: Path):
     assert detail.json()["id"] == session_id
 
 
+def test_upload_with_folder_relative_filename_does_not_crash(client, synthetic_ucs_path: Path):
+    # A directory upload (browser "Choose folder" / webkitdirectory) sends
+    # each file's name with its folder-relative path, e.g.
+    # "My Devices/box1.ucs" -- the upload path must never be built directly
+    # from that untrusted client-supplied string (regression: this 500'd
+    # with FileNotFoundError because "My Devices/" doesn't exist under the
+    # session's upload dir).
+    with open(synthetic_ucs_path, "rb") as f:
+        resp = client.post(
+            "/api/v1/sessions",
+            files={"file": ("My Devices/sub/synthetic.ucs", f, "application/octet-stream")},
+        )
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["status"] == "ready"
+    assert body["source_filename"] == "synthetic.ucs"
+    assert body["name"] == "synthetic"
+
+
 def test_delete_session_purges_db_file_and_registry_row(client, ready_session_id: str):
     from app.storage import session_db
 

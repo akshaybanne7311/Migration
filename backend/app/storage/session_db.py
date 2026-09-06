@@ -173,5 +173,12 @@ def write_parsed_config(conn: sqlite3.Connection, config: ParsedConfig) -> None:
                     (vip.name, monitor_name),
                 )
 
+        for obj in config.system_objects:
+            conn.execute(
+                "INSERT INTO system_objects (object_type, name, entries_json) "
+                "VALUES (?, ?, ?)",
+                (obj.object_type, obj.name, obj.entries_json),
+            )
+
         for warning in config.warnings:
             conn.execute("INSERT INTO ingest_warnings (message) VALUES (?)", (warning,))

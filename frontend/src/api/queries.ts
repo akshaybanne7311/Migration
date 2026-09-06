@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { create } from "zustand";
 import { api } from "./client";
@@ -34,10 +35,12 @@ export function useValidatedSession() {
     retry: false,
   });
 
-  if (sessionQuery.isError && currentSessionId) {
-    queryClient.removeQueries({ queryKey: ["session", currentSessionId] });
-    setCurrentSessionId(null);
-  }
+  useEffect(() => {
+    if (sessionQuery.isError && currentSessionId) {
+      queryClient.removeQueries({ queryKey: ["session", currentSessionId] });
+      setCurrentSessionId(null);
+    }
+  }, [sessionQuery.isError, currentSessionId, queryClient, setCurrentSessionId]);
 
   return {
     sessionId: sessionQuery.isError ? null : currentSessionId,
@@ -48,6 +51,23 @@ export function useValidatedSession() {
 
 export function useSessionsList() {
   return useQuery({ queryKey: ["sessions"], queryFn: api.listSessions });
+}
+
+export function useHealthCheck(sessionId: string | null) {
+  return useQuery({
+    queryKey: ["session", sessionId, "health-check"],
+    queryFn: () => api.runHealthCheck(sessionId as string),
+    enabled: !!sessionId,
+  });
+}
+
+export function useBackendHealth() {
+  return useQuery({
+    queryKey: ["health"],
+    queryFn: api.health,
+    retry: false,
+    refetchInterval: 30000,
+  });
 }
 
 export function useVips(sessionId: string | null, search?: string) {
@@ -78,6 +98,14 @@ export function useVlans(sessionId: string | null) {
   return useQuery({
     queryKey: ["session", sessionId, "vlans"],
     queryFn: () => api.listVlans(sessionId as string),
+    enabled: !!sessionId,
+  });
+}
+
+export function useSystemObjects(sessionId: string | null) {
+  return useQuery({
+    queryKey: ["session", sessionId, "system-objects"],
+    queryFn: () => api.listSystemObjects(sessionId as string),
     enabled: !!sessionId,
   });
 }
