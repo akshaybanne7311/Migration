@@ -23,7 +23,7 @@ function text(v: unknown): string {
 
 async function loadDocx() {
   const [docx, { saveAs }] = await Promise.all([import("docx"), import("file-saver")]);
-  const { BorderStyle, Document, HeadingLevel, Packer, Paragraph, ShadingType, Table, TableCell, TableRow, TextRun, WidthType } = docx;
+  const { BorderStyle, Document, HeadingLevel, Packer, PageBreak, Paragraph, ShadingType, Table, TableCell, TableOfContents, TableRow, TextRun, WidthType } = docx;
   const CELL_BORDER = { style: BorderStyle.SINGLE, size: 4, color: "CBD5E1" };
   const BORDERS = { top: CELL_BORDER, bottom: CELL_BORDER, left: CELL_BORDER, right: CELL_BORDER };
   const headerCell = (t: string) =>
@@ -42,7 +42,15 @@ async function loadDocx() {
       width: { size: 100, type: WidthType.PERCENTAGE },
       rows: [new TableRow({ children: headers.map(headerCell) }), ...rows.map((r) => new TableRow({ children: r.map(cell) }))],
     });
-  return { Document, HeadingLevel, Packer, Paragraph, TextRun, saveAs, h, p, table };
+  // A real Word TOC field (updates from the document's own H1-H3 headings)
+  // -- Word shows it with placeholder page numbers until the reader
+  // updates the field (right-click -> Update Field, or F9), which is
+  // standard Word behavior for any generated document, not a bug in this
+  // one; a note to that effect is added right below it in both documents.
+  const toc = () =>
+    new TableOfContents("Table of Contents", { hyperlink: true, headingStyleRange: "1-3" });
+  const pageBreak = () => new Paragraph({ children: [new PageBreak()] });
+  return { Document, HeadingLevel, Packer, Paragraph, TextRun, saveAs, h, p, table, toc, pageBreak };
 }
 
 /** High-Level Design: source environment architecture, scope, and risk --
@@ -58,7 +66,7 @@ export async function exportHldDocument(params: { sessionId: string; sessionName
     api.listSystemObjects(sessionId),
     api.runHealthCheck(sessionId).catch(() => null),
   ]);
-  const { Document, HeadingLevel, Packer, Paragraph, TextRun, saveAs, h, p, table } = await loadDocx();
+  const { Document, HeadingLevel, Packer, Paragraph, TextRun, saveAs, h, p, table, toc, pageBreak } = await loadDocx();
 
   const byType = (t: string) => systemObjects.items.filter((o) => o.object_type === t);
   const license = byType("sys license").find((o) => o.name === "current");
@@ -90,6 +98,12 @@ export async function exportHldDocument(params: { sessionId: string; sessionName
             children: [new TextRun({ text: `Session: ${sessionName}  |  Generated: ${now}`, size: 20, color: "64748B" })],
             spacing: { after: 400 },
           }),
+          toc(),
+          new Paragraph({
+            children: [new TextRun({ text: "(Right-click the table above and choose \"Update Field\" to populate page numbers -- this is standard Word behavior for a generated TOC, not a rendering error.)", size: 18, italics: true, color: "94A3B8" })],
+            spacing: { after: 200 },
+          }),
+          pageBreak(),
 
           h("1. Executive Summary", HeadingLevel.HEADING_1),
           p(
@@ -185,7 +199,7 @@ export async function exportLldDocument(params: {
   generated: GenerateResult | null;
 }) {
   const { sessionName, plan, vipsByName, kpis, validation, generated } = params;
-  const { Document, HeadingLevel, Packer, Paragraph, TextRun, saveAs, h, p, table } = await loadDocx();
+  const { Document, HeadingLevel, Packer, Paragraph, TextRun, saveAs, h, p, table, toc, pageBreak } = await loadDocx();
 
   const now = new Date().toLocaleString();
   const CHANGE_TYPE_LABEL: Record<string, string> = {
@@ -214,6 +228,12 @@ export async function exportLldDocument(params: {
             children: [new TextRun({ text: `Session: ${sessionName}  |  Generated: ${now}`, size: 20, color: "64748B" })],
             spacing: { after: 400 },
           }),
+          toc(),
+          new Paragraph({
+            children: [new TextRun({ text: "(Right-click the table above and choose \"Update Field\" to populate page numbers -- this is standard Word behavior for a generated TOC, not a rendering error.)", size: 18, italics: true, color: "94A3B8" })],
+            spacing: { after: 200 },
+          }),
+          pageBreak(),
 
           h("1. Object Scope", HeadingLevel.HEADING_1),
           table(

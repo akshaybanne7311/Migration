@@ -14,7 +14,7 @@ export async function exportSopDocument(params: {
 }) {
   const { sessionName, selectedVips, kpis, validation, generated, outputMode } = params;
   const [docx, { saveAs }] = await Promise.all([import("docx"), import("file-saver")]);
-  const { BorderStyle, Document, HeadingLevel, Packer, Paragraph, ShadingType, Table, TableCell, TableRow, TextRun, WidthType } = docx;
+  const { BorderStyle, Document, HeadingLevel, Packer, PageBreak, Paragraph, ShadingType, Table, TableCell, TableOfContents, TableRow, TextRun, WidthType } = docx;
 
   const CELL_BORDER = { style: BorderStyle.SINGLE, size: 4, color: "CBD5E1" };
   const BORDERS = { top: CELL_BORDER, bottom: CELL_BORDER, left: CELL_BORDER, right: CELL_BORDER };
@@ -52,6 +52,12 @@ export async function exportSopDocument(params: {
             children: [new TextRun({ text: `Session: ${sessionName}  |  Generated: ${now}`, size: 20, color: "64748B" })],
             spacing: { after: 400 },
           }),
+          new TableOfContents("Table of Contents", { hyperlink: true, headingStyleRange: "1-3" }),
+          new Paragraph({
+            children: [new TextRun({ text: "(Right-click the table above and choose \"Update Field\" to populate page numbers -- this is standard Word behavior for a generated TOC, not a rendering error.)", size: 18, italics: true, color: "94A3B8" })],
+            spacing: { after: 200 },
+          }),
+          new Paragraph({ children: [new PageBreak()] }),
 
           h("1. Overview", HeadingLevel.HEADING_1),
           p(

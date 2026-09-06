@@ -336,6 +336,28 @@ export async function exportFullSessionToExcel(params: { sessionId: string; sess
     }
   }
 
+  // --- Index: every sheet this workbook actually ended up with, as a
+  // clickable jump list -- built last since sheets like the system-object
+  // categories are only added conditionally when the archive had that
+  // object type, so the final sheet list isn't known until now. A "Back
+  // to Index" link is added to the top-left of every other sheet so
+  // there's a way back without using Excel's own sheet tabs. ---
+  const dataSheets = wb.worksheets.filter((ws) => ws.name !== "Summary");
+  summary.addRow({});
+  const indexHeaderRow = summary.addRow({ field: "Sheet Index", value: `${dataSheets.length} sheets` });
+  indexHeaderRow.getCell("field").font = { bold: true, size: 13 };
+  for (const ws of dataSheets) {
+    const rowCount = ws.rowCount > 0 ? ws.rowCount - 1 : 0; // exclude header row
+    const row = summary.addRow({ field: ws.name, value: `${rowCount} row${rowCount === 1 ? "" : "s"}` });
+    const linkCell = row.getCell("field");
+    linkCell.value = { text: ws.name, hyperlink: `#'${ws.name}'!A1` };
+    linkCell.font = { color: { argb: "FF2563A6" }, underline: true };
+
+    ws.spliceRows(1, 0, []); // push the real header row down one, so the back-link gets its own row
+    ws.getCell("A1").value = { text: "◂ Back to Index", hyperlink: "#Summary!A1" };
+    ws.getCell("A1").font = { color: { argb: "FF2563A6" }, underline: true, italic: true, size: 10 };
+  }
+
   const buffer = await wb.xlsx.writeBuffer();
   saveAs(
     new Blob([buffer], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" }),
