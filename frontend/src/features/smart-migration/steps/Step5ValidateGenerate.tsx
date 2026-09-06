@@ -58,21 +58,23 @@ function ValidationChecklist({ result }: { result: ValidationResult }) {
 }
 
 function GeneratedOutput({ result }: { result: GenerateResult }) {
-  const [tab, setTab] = useState<"tmsh" | "rest" | "as3">("tmsh");
+  const [tab, setTab] = useState<"tmsh" | "rest" | "as3" | "ansible">("tmsh");
 
   const text =
     tab === "tmsh"
       ? result.tmsh
       : tab === "rest"
         ? JSON.stringify(result.rest, null, 2)
-        : JSON.stringify(result.as3, null, 2);
+        : tab === "ansible"
+          ? result.ansible
+          : JSON.stringify(result.as3, null, 2);
 
   function copy() {
     navigator.clipboard.writeText(text);
   }
 
   function download() {
-    const ext = tab === "tmsh" ? "txt" : "json";
+    const ext = tab === "tmsh" ? "txt" : tab === "ansible" ? "yml" : "json";
     const blob = new Blob([text], { type: "text/plain" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
@@ -86,7 +88,7 @@ function GeneratedOutput({ result }: { result: GenerateResult }) {
     <Card className="p-0 overflow-hidden">
       <div className="flex items-center justify-between border-b border-slate-200 px-4 py-2">
         <div className="flex gap-1">
-          {(["tmsh", "rest", "as3"] as const).map((t) => (
+          {(["tmsh", "rest", "as3", "ansible"] as const).map((t) => (
             <button
               key={t}
               onClick={() => setTab(t)}
@@ -122,7 +124,7 @@ function GeneratedOutput({ result }: { result: GenerateResult }) {
           <span className="h-2.5 w-2.5 rounded-full" style={{ background: "#ffbd2e" }} />
           <span className="h-2.5 w-2.5 rounded-full" style={{ background: "#27c93f" }} />
           <span className="ml-2 text-[11px] font-mono-neon" style={{ color: "var(--text-dim)" }}>
-            migration-output.{tab === "tmsh" ? "txt" : "json"}
+            migration-output.{tab === "tmsh" ? "txt" : tab === "ansible" ? "yml" : "json"}
           </span>
         </div>
         <pre

@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
 from pydantic import BaseModel
 
 from app.deps import get_session_db
+from app.generation.ansible_generator import generate_ansible_playbook
 from app.generation.as3_generator import generate_as3
 from app.generation.emit_order import build_migration_context
 from app.generation.full_recreate import (
@@ -231,6 +232,7 @@ def generate_migration_outputs(
         "tmsh": tmsh,
         "rest": [c.model_dump() for c in rest_calls],
         "as3": as3,
+        "ansible": generate_ansible_playbook(rest_calls),
         "validation": validation.model_dump(),
         "output_mode": plan.output_mode,
     }

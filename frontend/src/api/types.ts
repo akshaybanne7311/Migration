@@ -224,6 +224,10 @@ export interface GenerateResult {
   tmsh: string;
   rest: RestCall[];
   as3: { declaration: Record<string, unknown>; "x-tmos-notes": Record<string, string>[] };
+  /** Ansible playbook (ansible.builtin.uri tasks) covering the same REST
+   * calls as the `rest` field, one-for-one -- for controllers that run
+   * migrations through Ansible rather than a bare REST client. */
+  ansible: string;
   validation: ValidationResult;
   output_mode: OutputMode;
 }
