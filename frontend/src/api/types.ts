@@ -218,6 +218,27 @@ export interface CommandHistoryListOut {
   total_all: number;
 }
 
+/** One real, timestamped save of a config file, from TMOS's own
+ * config/.diffVersions/config/<file>/<N>.patch unified-diff history --
+ * more granular than command history (the actual changed lines, not just
+ * the tmsh command that triggered the save). */
+export interface ConfigRevision {
+  config_file: string;
+  patch_number: number;
+  timestamp: string;
+  lines_added: number;
+  lines_removed: number;
+  diff_text: string;
+  contains_secret: boolean;
+}
+
+export interface ConfigRevisionListOut {
+  items: ConfigRevision[];
+  total: number;
+  total_all: number;
+  config_files: string[];
+}
+
 export interface RestCall {
   method: string;
   path: string;

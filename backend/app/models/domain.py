@@ -103,6 +103,21 @@ class CommandHistoryEntry(BaseModel):
     contains_secret: bool = False
 
 
+class ConfigRevision(BaseModel):
+    """One real, timestamped save of a config file, from TMOS's own
+    `config/.diffVersions/config/<file>/<N>.patch` unified-diff history --
+    more granular than command history (shows the actual lines that
+    changed, not just the tmsh command that triggered the save)."""
+
+    config_file: str
+    patch_number: int
+    timestamp: str
+    lines_added: int
+    lines_removed: int
+    diff_text: str
+    contains_secret: bool = False
+
+
 class ParsedConfig(BaseModel):
     """Everything extracted from one bigip.conf, before any DB write."""
 

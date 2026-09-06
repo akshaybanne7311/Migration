@@ -195,3 +195,25 @@ def write_command_history(conn: sqlite3.Connection, entries) -> None:
                 "VALUES (?, ?, ?, ?, ?)",
                 (e.user, e.timestamp, e.command, 1 if e.is_mutating else 0, 1 if e.contains_secret else 0),
             )
+
+
+def write_config_revisions(conn: sqlite3.Connection, revisions) -> None:
+    """Separate from write_parsed_config for the same reason as command
+    history: config revisions come from config/.diffVersions/ patch files,
+    extracted independently of the bigip.conf text parse."""
+    with conn:
+        for r in revisions:
+            conn.execute(
+                "INSERT INTO config_revisions "
+                "(config_file, patch_number, timestamp, lines_added, lines_removed, diff_text, contains_secret) "
+                "VALUES (?, ?, ?, ?, ?, ?, ?)",
+                (
+                    r.config_file,
+                    r.patch_number,
+                    r.timestamp,
+                    r.lines_added,
+                    r.lines_removed,
+                    r.diff_text,
+                    1 if r.contains_secret else 0,
+                ),
+            )

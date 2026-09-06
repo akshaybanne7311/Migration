@@ -169,6 +169,55 @@ def extract_license_and_platform_files(archive_path: Path) -> Dict[str, str]:
     return result
 
 
+_DIFF_VERSIONS_PATCH_RE = re.compile(r"^config/\.diffVersions/config/([^/]+)/(\d+)\.patch$")
+# BigDB.dat is TMOS's internal runtime key/value database, not
+# human-authored config -- it patches on practically every request and
+# would drown out every real config change (confirmed on a real archive:
+# 246 BigDB.dat patches vs 76 for bigip.conf on the same device). Excluded
+# rather than surfaced as noise, the same call already made for tmsh's own
+# sleep/echo bookkeeping lines in command history.
+_DIFF_VERSIONS_EXCLUDED_FILES = {"BigDB.dat"}
+
+
+def extract_config_revision_patches(archive_path: Path) -> List[Dict[str, object]]:
+    """TMOS keeps a numbered unified-diff patch (`config/.diffVersions/config/
+    <file>/<N>.patch`) for every save to bigip.conf/bigip_base.conf/
+    bigip_user.conf/bigip_script.conf -- a real, timestamped (via the tar
+    member's own mtime) history of exactly what changed in the device's
+    config over its lifetime, independent of and more granular than tmsh
+    shell history. Confirmed on a real archive: standard `diff -u` format,
+    real content (e.g. an SNMP trap community string appearing in an added
+    line) -- so this is read but never surfaced un-redacted; redaction
+    happens in app/ingest/config_revisions.py, not here.
+    """
+    path = Path(archive_path)
+    if path.suffix.lower() == ".conf" or not tarfile.is_tarfile(path):
+        return []
+    results: List[Dict[str, object]] = []
+    with tarfile.open(path, "r:*") as tar:
+        for member in tar.getmembers():
+            if not member.isfile():
+                continue
+            match = _DIFF_VERSIONS_PATCH_RE.match(member.name)
+            if not match:
+                continue
+            config_file, patch_number = match.group(1), match.group(2)
+            if config_file in _DIFF_VERSIONS_EXCLUDED_FILES:
+                continue
+            extracted = tar.extractfile(member)
+            if extracted is None:
+                continue
+            results.append(
+                {
+                    "config_file": config_file,
+                    "patch_number": int(patch_number),
+                    "mtime": member.mtime,
+                    "text": extracted.read().decode("utf-8", errors="replace"),
+                }
+            )
+    return results
+
+
 def extract_archive_member(archive_path: Path, member_name: str) -> Optional[bytes]:
     """Re-extracts one exact file (by its archive-internal path, e.g. one of
     the `source_paths` recorded on a parsed certificate) so the original

@@ -10,6 +10,7 @@ from typing import List, Optional
 from app.models.domain import (
     AddressFamily,
     CommandHistoryEntry,
+    ConfigRevision,
     Monitor,
     Node,
     Pool,
@@ -173,6 +174,45 @@ class CommandHistoryRepository:
     @staticmethod
     def count(conn: sqlite3.Connection) -> int:
         row = conn.execute("SELECT COUNT(*) AS c FROM command_history").fetchone()
+        return row["c"]
+
+
+class ConfigRevisionRepository:
+    @staticmethod
+    def list(conn: sqlite3.Connection, config_file: Optional[str] = None) -> List[ConfigRevision]:
+        query = (
+            "SELECT config_file, patch_number, timestamp, lines_added, lines_removed, diff_text, contains_secret "
+            "FROM config_revisions WHERE 1=1"
+        )
+        params: List[object] = []
+        if config_file:
+            query += " AND config_file = ?"
+            params.append(config_file)
+        query += " ORDER BY config_file, patch_number"
+        rows = conn.execute(query, params).fetchall()
+        return [
+            ConfigRevision(
+                config_file=r["config_file"],
+                patch_number=r["patch_number"],
+                timestamp=r["timestamp"],
+                lines_added=r["lines_added"],
+                lines_removed=r["lines_removed"],
+                diff_text=r["diff_text"],
+                contains_secret=bool(r["contains_secret"]),
+            )
+            for r in rows
+        ]
+
+    @staticmethod
+    def config_files(conn: sqlite3.Connection) -> List[str]:
+        rows = conn.execute(
+            "SELECT config_file, COUNT(*) AS c FROM config_revisions GROUP BY config_file ORDER BY config_file"
+        ).fetchall()
+        return [r["config_file"] for r in rows]
+
+    @staticmethod
+    def count(conn: sqlite3.Connection) -> int:
+        row = conn.execute("SELECT COUNT(*) AS c FROM config_revisions").fetchone()
         return row["c"]
 
 

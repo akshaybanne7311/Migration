@@ -1,6 +1,7 @@
 import axios from "axios";
 import type {
   CommandHistoryListOut,
+  ConfigRevisionListOut,
   CsvImportResult,
   CsvImportType,
   GenerateResult,
@@ -118,6 +119,12 @@ export const api = {
       .then((r) => r.data),
   certificateDownloadUrl: (sessionId: string, fingerprint: string) =>
     `${API_BASE}/sessions/${sessionId}/certificates/${fingerprint}/download`,
+  listConfigRevisions: (sessionId: string, opts?: { configFile?: string }) =>
+    http
+      .get<ConfigRevisionListOut>(`/sessions/${sessionId}/config-revisions`, {
+        params: { config_file: opts?.configFile ?? undefined },
+      })
+      .then((r) => r.data),
 
   // migration plans
   createPlan: (sessionId: string, plan: MigrationPlan) =>

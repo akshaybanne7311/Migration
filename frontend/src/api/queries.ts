@@ -69,6 +69,14 @@ export function useCommandHistory(sessionId: string | null, opts?: { mutatingOnl
   });
 }
 
+export function useConfigRevisions(sessionId: string | null, opts?: { configFile?: string }) {
+  return useQuery({
+    queryKey: ["session", sessionId, "config-revisions", opts?.configFile ?? null],
+    queryFn: () => api.listConfigRevisions(sessionId as string, opts),
+    enabled: !!sessionId,
+  });
+}
+
 export function useBackendHealth() {
   return useQuery({
     queryKey: ["health"],

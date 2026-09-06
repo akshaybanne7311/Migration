@@ -126,6 +126,23 @@ CREATE TABLE command_history (
 CREATE INDEX idx_command_history_mutating ON command_history(is_mutating);
 CREATE INDEX idx_command_history_user ON command_history(user);
 
+-- Real, timestamped config-file save history from TMOS's own
+-- config/.diffVersions/config/<file>/<N>.patch unified-diff files --
+-- more granular than command_history (actual changed lines, not the
+-- command that triggered the save). Same best-effort population as
+-- command_history: absent for a raw .conf upload.
+CREATE TABLE config_revisions (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    config_file TEXT NOT NULL,
+    patch_number INTEGER NOT NULL,
+    timestamp TEXT NOT NULL,
+    lines_added INTEGER NOT NULL DEFAULT 0,
+    lines_removed INTEGER NOT NULL DEFAULT 0,
+    diff_text TEXT NOT NULL,
+    contains_secret INTEGER NOT NULL DEFAULT 0
+);
+CREATE INDEX idx_config_revisions_file ON config_revisions(config_file);
+
 CREATE TABLE ingest_warnings (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     message TEXT NOT NULL

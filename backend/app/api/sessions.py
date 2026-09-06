@@ -10,11 +10,13 @@ from app.ingest.archive import (
     ArchiveError,
     extract_certificate_files,
     extract_command_history,
+    extract_config_revision_patches,
     extract_config_text,
     extract_license_and_platform_files,
 )
 from app.ingest.certificates import certificate_to_system_object, parse_certificates
 from app.ingest.command_history import parse_command_history
+from app.ingest.config_revisions import parse_config_revision_patches
 from app.ingest.license_info import license_bundle_to_system_objects
 from app.ingest.ingest_pipeline import parse_bigip_conf
 from app.storage import registry_db, session_db
@@ -130,6 +132,13 @@ async def upload_session(file: UploadFile = File(...)) -> SessionOut:
                     for entry in parse_command_history(raw, user)
                 ]
                 session_db.write_command_history(conn, all_entries)
+            except Exception:  # noqa: BLE001 - bonus data, never blocks the upload
+                pass
+
+            try:
+                raw_patches = extract_config_revision_patches(archive_path)
+                revisions = parse_config_revision_patches(raw_patches)
+                session_db.write_config_revisions(conn, revisions)
             except Exception:  # noqa: BLE001 - bonus data, never blocks the upload
                 pass
         finally:
