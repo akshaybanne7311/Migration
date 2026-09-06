@@ -15,3 +15,7 @@ class ValidationInput:
     vips_by_name: Dict[str, Vip]
     vlans_by_name: Dict[str, Vlan]
     monitors_by_name: Dict[str, Monitor] = field(default_factory=dict)
+    # Defaults to the pre-existing behavior (validate as if changes_only)
+    # for the handful of tests that construct ValidationInput directly
+    # without this field -- see tmsh_syntax.py for why it matters.
+    output_mode: str = "changes_only"

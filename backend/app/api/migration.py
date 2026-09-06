@@ -186,6 +186,7 @@ def validate_migration_plan(
         vips_by_name=vips_by_name,
         vlans_by_name=vlans_by_name,
         monitors_by_name=monitors_by_name,
+        output_mode=plan.output_mode,
     )
     return run_validation(vi)
 
@@ -208,6 +209,7 @@ def _resolve_and_generate(conn: sqlite3.Connection, plan: MigrationPlan):
         vips_by_name=vips_by_name,
         vlans_by_name=vlans_by_name,
         monitors_by_name=monitors_by_name,
+        output_mode=plan.output_mode,
     )
     validation = run_validation(vi)
     if validation.overall == "BLOCKED":
